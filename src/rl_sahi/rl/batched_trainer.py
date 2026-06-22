@@ -453,7 +453,13 @@ def batched_train_dqn(
                 result = step_results[i]
                 terminal_outcome = terminal_outcomes[i]
                 if result.done and terminal_outcome is not None:
-                    result.reward = _terminal_reward_with_crop_outcome(result.reward, terminal_outcome)
+                    terminal_hard_new_hits = int((w.env.covered & ~w.previous_covered).sum())
+                    result.reward = _terminal_reward_with_crop_outcome(
+                        result.reward,
+                        terminal_outcome,
+                        terminal_hard_new_hits,
+                        cfg,
+                    )
                     w.crop_new_detection_gain_total += int(terminal_outcome.new_detection_gain)
                     w.crop_new_detection_utility_total += float(terminal_outcome.new_detection_utility)
                     w.crop_tp_gain_total += int(terminal_outcome.tp_gain)
@@ -529,7 +535,11 @@ def batched_train_dqn(
                         stop_episode = (
                             w.slice_idx >= w.current_max_slices
                             or w.attempt_idx >= w.current_max_attempts
-                            or (w.previous_covered.all() and len(w.previous_covered) > 0)
+                            or (
+                                crop_evaluator is None
+                                and w.previous_covered.all()
+                                and len(w.previous_covered) > 0
+                            )
                         )
                     elif w.attempt_idx >= w.current_max_attempts:
                         stop_episode = True

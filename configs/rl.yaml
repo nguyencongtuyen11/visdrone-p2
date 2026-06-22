@@ -104,3 +104,7 @@ train:
   crop_fp_penalty: 1.5
   crop_empty_penalty: 1.2
   crop_no_gain_penalty: 1.2
+  hard_hit_reward: 4.0
+  crop_outcome_reward_scale: 0.1
+  accepted_no_hard_penalty: 2.0
+  rejected_crop_penalty: 0.5

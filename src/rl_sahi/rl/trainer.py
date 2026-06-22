@@ -79,6 +79,10 @@ class TrainConfig:
     crop_fp_penalty: float = 1.5
     crop_empty_penalty: float = 1.2
     crop_no_gain_penalty: float = 1.2
+    hard_hit_reward: float = 4.0
+    crop_outcome_reward_scale: float = 0.1
+    accepted_no_hard_penalty: float = 2.0
+    rejected_crop_penalty: float = 0.5
 
 def epsilon_by_step(step: int, cfg: TrainConfig) -> float:
     frac = min(float(step) / max(cfg.epsilon_decay_steps, 1), 1.0)
@@ -144,10 +148,24 @@ def _max_slice_attempts(env_cfg: EnvConfig, infer_cfg: InferenceConfig | None, m
     return max(int(slice_budget) * 2, int(slice_budget), 1)
 
 
-def _terminal_reward_with_crop_outcome(base_reward: float, outcome: CropOutcome) -> float:
+def _terminal_reward_with_crop_outcome(
+    base_reward: float,
+    outcome: CropOutcome,
+    hard_new_hits: int,
+    cfg: TrainConfig,
+) -> float:
+    hard_new_hits = max(int(hard_new_hits), 0)
+    crop_scale = max(float(cfg.crop_outcome_reward_scale), 0.0)
+    crop_reward = float(outcome.reward) * crop_scale
+    negative_crop_reward = min(float(outcome.reward), 0.0) * crop_scale
+
+    if hard_new_hits > 0:
+        hard_reward = float(cfg.hard_hit_reward) * float(hard_new_hits)
+        rejected_penalty = 0.0 if outcome.accepted else float(cfg.rejected_crop_penalty)
+        return float(base_reward + hard_reward + crop_reward - rejected_penalty)
     if outcome.accepted:
-        return float(base_reward + outcome.reward)
-    return float(min(base_reward, 0.0) + outcome.reward)
+        return float(min(base_reward, 0.0) + negative_crop_reward - float(cfg.accepted_no_hard_penalty))
+    return float(min(base_reward, 0.0) + negative_crop_reward - float(cfg.rejected_crop_penalty))
 
 
 def optimize(
@@ -660,7 +678,13 @@ def train_dqn(
                             accepted_new_count,
                         )
                         if terminal_outcome is not None:
-                            result.reward = _terminal_reward_with_crop_outcome(result.reward, terminal_outcome)
+                            terminal_hard_new_hits = int((env.covered & ~previous_covered).sum())
+                            result.reward = _terminal_reward_with_crop_outcome(
+                                result.reward,
+                                terminal_outcome,
+                                terminal_hard_new_hits,
+                                cfg,
+                            )
                             crop_new_detection_gain_total += int(terminal_outcome.new_detection_gain)
                             crop_new_detection_utility_total += float(terminal_outcome.new_detection_utility)
                             crop_tp_gain_total += int(terminal_outcome.tp_gain)
@@ -745,7 +769,7 @@ def train_dqn(
                     slice_classes_all.append(terminal_outcome.classes)
                     accepted_new_count = terminal_outcome.accepted_new_count_after
                 accepted_slices += 1
-                if previous_covered.all() and len(previous_covered) > 0:
+                if crop_evaluator is None and previous_covered.all() and len(previous_covered) > 0:
                     break
 
             if optimizer_steps > 0:

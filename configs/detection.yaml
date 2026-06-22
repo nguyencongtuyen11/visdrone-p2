@@ -1,0 +1,21 @@
+detect:
+  imgsz: 640
+  conf: 0.01
+  iou: 0.7
+  max_det: 3000
+  device: "cuda"
+  feature_layers:
+    - 16
+
+hard_region:
+  small_area_ratio: 0.01
+  small_area_percentile: 40
+  match_iou: 0.4
+  min_detect_score: 0.25
+  target_classes:
+    - 0
+    - 2
+    - 3
+    - 5
+    - 8
+    - 9

@@ -1,0 +1,84 @@
+{
+  "image": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\data\\raw\\images\\test\\9999938_00000_d_0000060.jpg",
+  "num_slices": 1,
+  "num_attempts": 3,
+  "num_rejected_slices": 1,
+  "slices": [
+    {
+      "attempt_index": 1,
+      "slice_index": 1,
+      "accepted": true,
+      "rejection_reason": null,
+      "roi": [
+        189.76953125,
+        380.2101135253906,
+        465.56964111328125,
+        656.0101318359375
+      ],
+      "actions": [
+        "right",
+        "up",
+        "up",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "left",
+        "left",
+        "left",
+        "left",
+        "left",
+        "left",
+        "left",
+        "down",
+        "down",
+        "down"
+      ],
+      "steps": 20,
+      "old_slice_overlap": 0.0,
+      "detections": 1
+    },
+    {
+      "attempt_index": 2,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        562.0999755859375,
+        256.1000061035156,
+        837.9000244140625,
+        531.9000244140625
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "detections": 0
+    },
+    {
+      "attempt_index": 3,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "old_slice_overlap",
+      "roi": [
+        686.2100219726562,
+        256.1000061035156,
+        962.0100708007812,
+        531.9000244140625
+      ],
+      "actions": [
+        "right"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.5499999523162842,
+      "detections": 0
+    }
+  ],
+  "detections": 8,
+  "prediction_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\detections\\9999938_00000_d_0000060.txt",
+  "visualization_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\visualizations\\9999938_00000_d_0000060.jpg"
+}

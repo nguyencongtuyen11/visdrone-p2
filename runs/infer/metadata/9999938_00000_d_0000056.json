@@ -1,0 +1,91 @@
+{
+  "image": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\data\\raw\\images\\test\\9999938_00000_d_0000056.jpg",
+  "num_slices": 0,
+  "num_attempts": 4,
+  "num_rejected_slices": 3,
+  "slices": [
+    {
+      "attempt_index": 1,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        43.989990234375,
+        216.69998168945312,
+        398.5899658203125,
+        571.2999877929688
+      ],
+      "actions": [
+        "zoom_out",
+        "down",
+        "left",
+        "left",
+        "left",
+        "up",
+        "stop"
+      ],
+      "steps": 7,
+      "old_slice_overlap": 0.0,
+      "detections": 0
+    },
+    {
+      "attempt_index": 2,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        810.320068359375,
+        256.1000061035156,
+        1086.1201171875,
+        531.9000244140625
+      ],
+      "actions": [
+        "right",
+        "right",
+        "stop"
+      ],
+      "steps": 3,
+      "old_slice_overlap": 0.0,
+      "detections": 0
+    },
+    {
+      "attempt_index": 3,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        562.0999755859375,
+        256.1000061035156,
+        837.9000244140625,
+        531.9000244140625
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0999998226761818,
+      "detections": 0
+    },
+    {
+      "attempt_index": 4,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "old_slice_overlap",
+      "roi": [
+        562.0999755859375,
+        131.989990234375,
+        837.9000244140625,
+        407.7900085449219
+      ],
+      "actions": [
+        "up"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.5499999523162842,
+      "detections": 0
+    }
+  ],
+  "detections": 3,
+  "prediction_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\detections\\9999938_00000_d_0000056.txt",
+  "visualization_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\visualizations\\9999938_00000_d_0000056.jpg"
+}

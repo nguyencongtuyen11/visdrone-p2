@@ -1,0 +1,67 @@
+{
+  "config": {
+    "iou_threshold": 0.5,
+    "fixed_slice_fraction": 0.35,
+    "fixed_overlap": 0.2,
+    "small_area_percentile": 40.0,
+    "target_classes": [
+      0,
+      2,
+      3,
+      5,
+      8,
+      9
+    ],
+    "class_mapping": {
+      "model_to_label": {
+        "0": 0,
+        "1": 2,
+        "2": 3,
+        "3": 9,
+        "5": 8,
+        "7": 5
+      },
+      "label_to_eval": {
+        "0": 0,
+        "1": 0,
+        "2": 2,
+        "3": 3,
+        "5": 5,
+        "8": 8,
+        "9": 9
+      }
+    }
+  },
+  "results": [
+    {
+      "method": "yolo_full",
+      "mAP50": 0.1559344137357396,
+      "small_recall": 0.1657754010695187,
+      "fp_per_image": 5.3125,
+      "crops_per_image": 0.0,
+      "latency_ms_per_image": 0.1892437485366827,
+      "images": 16.0,
+      "small_area_threshold": 0.0022049383260309696
+    },
+    {
+      "method": "fixed_grid_sahi",
+      "mAP50": 0.18915937010902786,
+      "small_recall": 0.40106951871657753,
+      "fp_per_image": 23.875,
+      "crops_per_image": 28.0,
+      "latency_ms_per_image": 1543.342018749172,
+      "images": 16.0,
+      "small_area_threshold": 0.0022049383260309696
+    },
+    {
+      "method": "rl_sahi",
+      "mAP50": 0.15992766910943185,
+      "small_recall": 0.2192513368983957,
+      "fp_per_image": 8.25,
+      "crops_per_image": 1.1875,
+      "latency_ms_per_image": 261.77206874763215,
+      "images": 16.0,
+      "small_area_threshold": 0.0022049383260309696
+    }
+  ]
+}

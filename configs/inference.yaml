@@ -1,0 +1,30 @@
+infer:
+  full_imgsz: 640
+  slice_imgsz: 640
+  full_conf: 0.01
+  output_conf: 0.25
+  iou: 0.7
+  merge_iou: 0.5
+  max_det: 3000
+  min_slice_detections: 1
+  min_slice_utility: 0.5
+  duplicate_iou: 0.5
+  max_slice_attempts: 16
+  require_stop_for_acceptance: true
+  target_classes:
+    - 0
+    - 2
+    - 3
+    - 5
+    - 8
+    - 9
+  device: "cuda"
+  feature_layers:
+    - 16
+  use_cache: true
+
+benchmark:
+  iou_threshold: 0.5
+  fixed_slice_fraction: 0.35
+  fixed_overlap: 0.2
+  small_area_percentile: 40

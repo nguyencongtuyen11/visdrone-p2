@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+
+# Dataset artifacts
+data/cache/
+data/processed/
+data/raw/images/
+data/
+
+*.pt
+!yolo11s.pt
+
+*.jpg
+.agents/
+.vscode/

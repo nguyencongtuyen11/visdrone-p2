@@ -1,0 +1,69 @@
+{
+  "image": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\data\\raw\\images\\val\\0000022_00000_d_0000004.jpg",
+  "num_slices": 5,
+  "slices": [
+    {
+      "slice_index": 1,
+      "roi": [
+        534.3374633789062,
+        364.0,
+        723.3374633789062,
+        539.0
+      ],
+      "steps": 20,
+      "old_slice_overlap": 0.0,
+      "detections": 0
+    },
+    {
+      "slice_index": 2,
+      "roi": [
+        192.45004272460938,
+        94.22999572753906,
+        257.2500305175781,
+        159.02996826171875
+      ],
+      "steps": 20,
+      "old_slice_overlap": 0.0,
+      "detections": 0
+    },
+    {
+      "slice_index": 3,
+      "roi": [
+        776.8650512695312,
+        22.54491424560547,
+        841.6651000976562,
+        87.34490203857422
+      ],
+      "steps": 20,
+      "old_slice_overlap": 0.0,
+      "detections": 0
+    },
+    {
+      "slice_index": 4,
+      "roi": [
+        107.4000015258789,
+        0.0,
+        172.1999969482422,
+        64.79997253417969
+      ],
+      "steps": 20,
+      "old_slice_overlap": 0.0,
+      "detections": 0
+    },
+    {
+      "slice_index": 5,
+      "roi": [
+        385.5,
+        175.5,
+        574.5,
+        364.5
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0005621698219329119,
+      "detections": 6
+    }
+  ],
+  "detections": 27,
+  "prediction_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\detections\\0000022_00000_d_0000004.txt",
+  "visualization_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\visualizations\\0000022_00000_d_0000004.jpg"
+}

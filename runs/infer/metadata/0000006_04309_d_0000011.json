@@ -1,0 +1,42 @@
+{
+  "image": "data\\raw\\images\\test\\0000006_04309_d_0000011.jpg",
+  "num_slices": 3,
+  "slices": [
+    {
+      "roi": [
+        0.0,
+        365.28753662109375,
+        344.25006103515625,
+        709.5375366210938
+      ],
+      "steps": 20,
+      "old_slice_overlap": 0.0,
+      "detections": 2
+    },
+    {
+      "roi": [
+        662.78759765625,
+        55.46247863769531,
+        1007.0376586914062,
+        399.71246337890625
+      ],
+      "steps": 8,
+      "old_slice_overlap": 0.0,
+      "detections": 6
+    },
+    {
+      "roi": [
+        546.125,
+        248.625,
+        813.875,
+        516.375
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.31841808557510376,
+      "detections": 2
+    }
+  ],
+  "detections": 35,
+  "prediction_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\detections\\0000006_04309_d_0000011.txt",
+  "visualization_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\visualizations\\0000006_04309_d_0000011.jpg"
+}

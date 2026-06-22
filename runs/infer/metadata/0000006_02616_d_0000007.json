@@ -1,0 +1,359 @@
+{
+  "image": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\data\\raw\\images\\test\\0000006_02616_d_0000007.jpg",
+  "num_slices": 5,
+  "num_attempts": 16,
+  "num_rejected_slices": 11,
+  "slices": [
+    {
+      "attempt_index": 1,
+      "slice_index": 1,
+      "accepted": true,
+      "rejection_reason": null,
+      "roi": [
+        530.4000244140625,
+        12.431249618530273,
+        744.5999755859375,
+        226.63125610351562
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.0,
+      "stop_due_to_stalled_roi": false,
+      "detections": 4,
+      "new_detections_after_nms": 3
+    },
+    {
+      "attempt_index": 2,
+      "slice_index": 2,
+      "accepted": true,
+      "rejection_reason": null,
+      "roi": [
+        530.4000244140625,
+        299.3062438964844,
+        744.5999755859375,
+        513.5062255859375
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.0,
+      "stop_due_to_stalled_roi": false,
+      "detections": 2,
+      "new_detections_after_nms": 2
+    },
+    {
+      "attempt_index": 3,
+      "slice_index": 3,
+      "accepted": true,
+      "rejection_reason": null,
+      "roi": [
+        445.3999938964844,
+        378.4837646484375,
+        659.5999755859375,
+        592.6837158203125
+      ],
+      "actions": [
+        "up",
+        "stop"
+      ],
+      "steps": 2,
+      "old_slice_overlap": 0.38021525740623474,
+      "attempted_slice_overlap": 0.38021525740623474,
+      "stop_due_to_stalled_roi": false,
+      "detections": 1,
+      "new_detections_after_nms": 1
+    },
+    {
+      "attempt_index": 4,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "no_new_detection_after_nms",
+      "roi": [
+        1125.4000244140625,
+        0.0,
+        1339.5999755859375,
+        178.81875610351562
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.0,
+      "stop_due_to_stalled_roi": false,
+      "detections": 1,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 5,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        275.3999938964844,
+        0.0,
+        489.6000061035156,
+        178.81875610351562
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.0,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 6,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        785.4000244140625,
+        0.0,
+        999.5999755859375,
+        178.81875610351562
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.0,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 7,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        190.39999389648438,
+        494.53997802734375,
+        404.6000061035156,
+        699.739990234375
+      ],
+      "actions": [
+        "down",
+        "down",
+        "down",
+        "down",
+        "down",
+        "down",
+        "down",
+        "down",
+        "down",
+        "down",
+        "up",
+        "stop"
+      ],
+      "steps": 12,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.0,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 8,
+      "slice_index": 4,
+      "accepted": true,
+      "rejection_reason": null,
+      "roi": [
+        445.3999938964844,
+        538.3687744140625,
+        659.5999755859375,
+        752.5687255859375
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.25357121229171753,
+      "attempted_slice_overlap": 0.25357121229171753,
+      "stop_due_to_stalled_roi": false,
+      "detections": 1,
+      "new_detections_after_nms": 1
+    },
+    {
+      "attempt_index": 9,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        955.4000244140625,
+        0.0,
+        1169.5999755859375,
+        178.81875610351562
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.20634903013706207,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 10,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        360.3999938964844,
+        108.0562515258789,
+        574.5999755859375,
+        322.2562561035156
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.11422889679670334,
+      "attempted_slice_overlap": 0.1992630660533905,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 11,
+      "slice_index": 5,
+      "accepted": true,
+      "rejection_reason": null,
+      "roi": [
+        530.4000244140625,
+        155.86874389648438,
+        744.5999755859375,
+        370.0687561035156
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.330357164144516,
+      "attempted_slice_overlap": 0.330357164144516,
+      "stop_due_to_stalled_roi": false,
+      "detections": 8,
+      "new_detections_after_nms": 6
+    },
+    {
+      "attempt_index": 12,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        275.3999938964844,
+        251.49374389648438,
+        489.6000061035156,
+        465.6937561035156
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.08401361107826233,
+      "attempted_slice_overlap": 0.1992630809545517,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 13,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        20.399999618530273,
+        442.7437438964844,
+        234.60000610351562,
+        656.9437255859375
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.15645141899585724,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 14,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        275.3999938964844,
+        633.9937744140625,
+        489.6000061035156,
+        764.0
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.18820522725582123,
+      "attempted_slice_overlap": 0.3050349950790405,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 15,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        20.399999618530273,
+        586.1812744140625,
+        234.60000610351562,
+        764.0
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.39794713258743286,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 16,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        20.399999618530273,
+        251.49374389648438,
+        234.60000610351562,
+        465.6937561035156
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "attempted_slice_overlap": 0.10714291036128998,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    }
+  ],
+  "detections": 24,
+  "prediction_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\detections\\0000006_02616_d_0000007.txt",
+  "visualization_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\visualizations\\0000006_02616_d_0000007.jpg"
+}

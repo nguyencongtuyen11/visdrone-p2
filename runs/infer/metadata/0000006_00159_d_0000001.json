@@ -1,0 +1,96 @@
+{
+  "image": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\data\\raw\\images\\test\\0000006_00159_d_0000001.jpg",
+  "num_slices": 1,
+  "num_attempts": 4,
+  "num_rejected_slices": 3,
+  "slices": [
+    {
+      "attempt_index": 1,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "empty_slice",
+      "roi": [
+        352.9625244140625,
+        0.0,
+        697.2125244140625,
+        328.95001220703125
+      ],
+      "actions": [
+        "up",
+        "up",
+        "zoom_out",
+        "left",
+        "zoom_out",
+        "stop"
+      ],
+      "steps": 6,
+      "old_slice_overlap": 0.0,
+      "stop_due_to_stalled_roi": false,
+      "detections": 0,
+      "new_detections_after_nms": 0
+    },
+    {
+      "attempt_index": 2,
+      "slice_index": 1,
+      "accepted": true,
+      "rejection_reason": null,
+      "roi": [
+        546.125,
+        248.625,
+        813.875,
+        516.375
+      ],
+      "actions": [
+        "stop"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.0,
+      "stop_due_to_stalled_roi": false,
+      "detections": 12,
+      "new_detections_after_nms": 12
+    },
+    {
+      "attempt_index": 3,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "old_slice_overlap",
+      "roi": [
+        666.6124877929688,
+        248.625,
+        934.3624877929688,
+        516.375
+      ],
+      "actions": [
+        "right"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.5500000715255737,
+      "stop_due_to_stalled_roi": false,
+      "repeat_attempt_overlap": 0.5500000715255737,
+      "detections": 0
+    },
+    {
+      "attempt_index": 4,
+      "slice_index": null,
+      "accepted": false,
+      "rejection_reason": "old_slice_overlap",
+      "roi": [
+        666.6124877929688,
+        248.625,
+        934.3624877929688,
+        516.375
+      ],
+      "actions": [
+        "right"
+      ],
+      "steps": 1,
+      "old_slice_overlap": 0.5500000715255737,
+      "stop_due_to_stalled_roi": false,
+      "repeat_attempt_overlap": 1.0,
+      "detections": 0
+    }
+  ],
+  "detections": 32,
+  "prediction_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\detections\\0000006_00159_d_0000001.txt",
+  "visualization_file": "C:\\Users\\Admin\\OneDrive\\Desktop\\term 9\\RL-SAHI\\runs\\infer\\visualizations\\0000006_00159_d_0000001.jpg"
+}

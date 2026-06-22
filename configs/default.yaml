@@ -1,0 +1,22 @@
+includes:
+  - paths.yaml
+  - detection.yaml
+  - rl.yaml
+  - inference.yaml
+
+classes:
+  model_to_label:
+    0: 0
+    1: 2
+    2: 3
+    3: 9
+    5: 8
+    7: 5
+  label_to_eval:
+    0: 0
+    1: 0
+    2: 2
+    3: 3
+    5: 5
+    8: 8
+    9: 9

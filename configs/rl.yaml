@@ -83,7 +83,7 @@ train:
   eval_interval: 500
   eval_episodes: 128
   eval_slice_cost_weight: 0.05
-  eval_benchmark_images: 0
+  eval_benchmark_images: 500
   eval_map_weight: 1.0
   eval_small_recall_weight: 1.5
   eval_fp_cost_weight: 0.01

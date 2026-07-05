@@ -35,7 +35,10 @@ ap.add_argument("--split", default="test")
 ap.add_argument("--limit", type=int, default=100)
 ap.add_argument("--base", type=int, default=640, help="imgsz anh goc (1 luot)")
 ap.add_argument("--slice", type=int, default=640, help="imgsz moi crop")
-ap.add_argument("--max-fine", type=int, default=8, help="so lat min RL toi da")
+ap.add_argument("--max-fine", type=int, default=8, help="so lat min RL toi da (env_cfg.max_slices)")
+ap.add_argument("--max-steps", type=int, default=0,
+                help="0 = giu nguyen checkpoint (10); >0 = ep so BUOC di chuyen moi lat (giam de nhanh hon)")
+ap.add_argument("--max-attempts", type=int, default=14, help="so lan thu lat toi da (giam de nhanh hon)")
 ap.add_argument("--device", default="cuda")
 args = ap.parse_args()
 
@@ -51,14 +54,17 @@ tc = tuple(cfg.section("infer")["target_classes"])
 cm = ClassMapping.from_config(cfg.section("classes"))
 icfg = InferenceConfig(full_imgsz=BASE, slice_imgsz=SLI, full_conf=0.01, output_conf=0.10, iou=0.7,
     merge_iou=0.5, max_det=3000, device=dev, feature_layers=(16,), target_classes=tc, class_mapping=cm,
-    min_slice_detections=1, min_slice_utility=0.2, duplicate_iou=0.5, max_slice_attempts=14,
+    min_slice_detections=1, min_slice_utility=0.2, duplicate_iou=0.5, max_slice_attempts=args.max_attempts,
     require_stop_for_acceptance=True)
 bcfg = BenchmarkConfig(fixed_slice_fraction=0.35, fixed_overlap=0.2, target_classes=tc, class_mapping=cm)
 model = load_yolo(str(WEIGHTS), device=dev)
 dt = resolve_torch_device(dev)
 policy, ck = load_policy(args.checkpoint, dt)
 env_cfg = ck["env_cfg_obj"]; env_cfg.max_slices = args.max_fine
+if args.max_steps > 0:
+    env_cfg.max_steps = args.max_steps          # ep so buoc di chuyen moi lat (giam = nhanh hon)
 state_cfg = ck.get("state_cfg_obj", StateConfig())
+print(f"[speed] max_steps={env_cfg.max_steps} max_slices={env_cfg.max_slices} max_attempts={args.max_attempts}")
 
 def sync():
     if dev == "cuda" and torch.cuda.is_available():

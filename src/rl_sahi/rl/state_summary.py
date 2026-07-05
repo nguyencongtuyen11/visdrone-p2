@@ -7,6 +7,7 @@ from rl_sahi.rl.state_config import SUMMARY_DIM, StateConfig
 from rl_sahi.rl.state_maps import proposal_mask, proposal_quality
 
 
+# giải thích: Hàm tạo vector tóm tắt 28 chiều chứa các thống kê về phát hiện vật thể, tọa độ ROI và lịch sử lát cắt
 def detection_summary(
     boxes: np.ndarray,
     scores: np.ndarray,
@@ -29,6 +30,7 @@ def detection_summary(
     image_area = float(image_shape[0] * image_shape[1])
     summary = np.zeros((SUMMARY_DIM,), dtype=np.float32)
 
+    # giải thích: Thống kê thông tin trên toàn ảnh nếu có vật thể
     if len(boxes) > 0:
         areas = area(boxes) / max(image_area, 1.0)
         low_mask = scores < cfg.low_conf_threshold
@@ -45,6 +47,7 @@ def detection_summary(
         if prop_mask.any():
             summary[26] = float(prop_quality[prop_mask].mean())
 
+        # giải thích: Thống kê thông tin chi tiết của các vật thể nằm bên trong vùng ROI hiện tại
         inter = intersection_matrix(np.asarray(roi, dtype=np.float32).reshape(1, 4), boxes)[0]
         in_roi = inter > 0.0
         if in_roi.any():
@@ -63,6 +66,7 @@ def detection_summary(
             if roi_prop_mask.any():
                 summary[27] = float(roi_prop_quality[roi_prop_mask].mean())
 
+    # giải thích: Trích xuất các đặc trưng hình học của ROI và trạng thái huấn luyện hiện tại
     nb = normalized_box(roi, image_shape)
     summary[12] = (nb[0] + nb[2]) / 2.0
     summary[13] = (nb[1] + nb[3]) / 2.0

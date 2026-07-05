@@ -24,6 +24,7 @@ from rl_sahi.rl.state_summary import detection_summary
 from rl_sahi.rl.state_vector import build_state_vector, normalize_feature
 
 
+# giải thích: Lớp SliceEnv định nghĩa môi trường RL cho việc di chuyển và thay đổi kích thước vùng cắt (ROI)
 class SliceEnv:
     def __init__(
         self,
@@ -76,6 +77,7 @@ class SliceEnv:
         self.roi = self._initial_roi()
         self.step_index = 0
 
+    # giải thích: Xác định thiết bị tính toán GPU/CPU thích hợp cho các phép toán trên hộp bọc
     def _resolve_box_device(self) -> torch.device | None:
         if not bool(getattr(self.env_cfg, "use_gpu_box_ops", True)):
             return None
@@ -89,6 +91,7 @@ class SliceEnv:
         except Exception:
             return None
 
+    # giải thích: Chuyển mảng hộp bọc NumPy thành PyTorch Tensor trên thiết bị đã chọn
     def _box_tensor(self, boxes: np.ndarray) -> torch.Tensor | None:
         if self.box_device is None:
             return None
@@ -97,6 +100,7 @@ class SliceEnv:
             return torch.zeros((0, 4), dtype=torch.float32, device=self.box_device)
         return torch.as_tensor(boxes, dtype=torch.float32, device=self.box_device)
 
+    # giải thích: Lọc và giữ lại các dự đoán thuộc lớp mục tiêu quan tâm
     def _filtered_detections(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         boxes = as_boxes(self.detection.boxes)
         scores = np.asarray(self.detection.scores, dtype=np.float32).reshape(-1)
@@ -107,6 +111,7 @@ class SliceEnv:
         mask = np.isin(classes.astype(np.int64), target)
         return boxes[mask], scores[mask], classes[mask]
 
+    # giải thích: Đặt lại trạng thái môi trường về trạng thái ban đầu của tập dữ liệu
     def reset(self) -> np.ndarray:
         self.history.fill(0.0)
         self.covered = self.previous_covered.copy()
@@ -115,6 +120,7 @@ class SliceEnv:
         self.history = mark_history(self.history, self.roi, self.image_shape, self.state_cfg.grid_size)
         return self._state()
 
+    # giải thích: Thực hiện một bước hành động trên môi trường, tính toán ROI mới, kiểm tra kết thúc và trả về phần thưởng
     def step(self, action: int | Action) -> StepResult:
         action = Action(int(action))
         done = action == Action.STOP
@@ -127,6 +133,7 @@ class SliceEnv:
             self.history = mark_history(self.history, self.roi, self.image_shape, self.state_cfg.grid_size)
 
         reward, info = self._reward(action, previous_roi)
+        # giải thích: Áp dụng các điều kiện dừng sớm và hình phạt nếu ROI không di chuyển hoặc chồng chéo quá nhiều
         if stalled_roi:
             done = True
             reward = min(reward, -1e-6) - self.env_cfg.stalled_without_stop_penalty
@@ -154,6 +161,7 @@ class SliceEnv:
         info["hard_total"] = int(len(self.hard_boxes))
         return StepResult(self._state(), reward, done, info)
 
+    # giải thích: Tính toán mặt nạ các hành động hợp lệ từ trạng thái hiện tại để tránh các hành động không hợp lý
     def valid_actions(self) -> np.ndarray:
         valid = np.ones((NUM_ACTIONS,), dtype=bool)
         non_stop_actions = [action for action in Action if action != Action.STOP]
@@ -200,6 +208,7 @@ class SliceEnv:
         )
         return valid
 
+    # giải thích: Chính sách mẫu (guided action) dựa trên heuristic giúp định hướng agent trong huấn luyện
     def guided_action(self) -> Action:
         escape = self._overlap_escape_action()
         if escape is not None:
@@ -238,6 +247,7 @@ class SliceEnv:
             candidate_centers,
             boxes[scores >= self.env_cfg.high_conf_threshold],
         )
+        # giải thích: Tính độ ưu tiên cho từng hộp đề xuất dựa trên khoảng cách, độ tin cậy và sự chồng chéo
         priority = quality
         priority += small_mask[target_mask].astype(np.float32) * 0.5
         priority += heat_support * 0.5
@@ -260,6 +270,7 @@ class SliceEnv:
             return Action.STOP
         return self._action_toward_target(candidate_centers[target_idx], candidate_boxes[[target_idx]])
 
+    # giải thích: Tìm mục tiêu tiềm năng nhất dựa trên bản đồ nhiệt (objectness heatmap) và lịch sử đã cắt
     def _heatmap_target(self) -> tuple[np.ndarray, float] | None:
         obj = np.asarray(self.detection.objectness_map, dtype=np.float32)
         if obj.size == 0:
@@ -362,6 +373,7 @@ class SliceEnv:
             )
         return mask
 
+    # giải thích: Chọn hành động di chuyển hoặc phóng to/thu nhỏ để hướng vùng cắt về phía mục tiêu
     def _action_toward_target(self, target: np.ndarray, target_box: np.ndarray | None = None) -> Action:
         target = np.asarray(target, dtype=np.float32).reshape(2)
         roi_center = centers(self.roi.reshape(1, 4))[0]
@@ -396,6 +408,7 @@ class SliceEnv:
             return Action.RIGHT if dx > 0 else Action.LEFT
         return Action.DOWN if dy > 0 else Action.UP
 
+    # giải thích: Hành động khẩn cấp để đưa vùng cắt ra khỏi vùng bị trùng lặp lớn với các lát cắt cũ
     def _overlap_escape_action(self) -> Action | None:
         current_overlap = max(self._old_slice_overlap(), self._attempted_slice_overlap())
         if current_overlap < self.env_cfg.old_slice_overlap_threshold:
@@ -410,6 +423,7 @@ class SliceEnv:
             return non_stop_actions[best_idx]
         return None
 
+    # giải thích: Xác định vùng cắt ROI ban đầu khi bắt đầu một tập (episode)
     def _initial_roi(self) -> np.ndarray:
         h, w = self.image_shape
         _min_side, max_side = self._side_limits()
@@ -420,6 +434,7 @@ class SliceEnv:
             target = np.array([w / 2.0, h / 2.0], dtype=np.float32)
         return box_from_center(float(target[0]), float(target[1]), side, self.image_shape)
 
+    # giải thích: Cập nhật tọa độ vùng ROI dựa trên hành động dịch chuyển hoặc thay đổi kích thước
     def _apply_action(self, action: Action) -> np.ndarray:
         side = self._roi_side()
         step = side * self.env_cfg.move_fraction
@@ -447,6 +462,7 @@ class SliceEnv:
             return zoom_box(self.roi, 1.0 / self.env_cfg.zoom_factor, self.image_shape, min_side, max_side)
         return self.roi
 
+    # giải thích: Tính toán giới hạn kích thước cạnh nhỏ nhất và lớn nhất cho vùng ROI
     def _side_limits(self) -> tuple[float, float]:
         h, w = self.image_shape
         min_side = min(h, w) * self.env_cfg.min_slice_fraction
@@ -463,6 +479,7 @@ class SliceEnv:
     def _current_roi_map(self) -> np.ndarray:
         return rasterize_boxes(self.roi.reshape(1, 4), self.image_shape, self.state_cfg.grid_size)
 
+    # giải thích: Khởi tạo danh sách các vùng khó đã được bao phủ bởi các lát cắt trước đó
     def _init_previous_covered(self, previous_covered: np.ndarray | None) -> np.ndarray:
         if len(self.hard_boxes) == 0:
             return np.zeros((0,), dtype=bool)
@@ -568,6 +585,7 @@ class SliceEnv:
             & (pts[:, 1] <= y2 - margin_y)
         )
 
+    # giải thích: Tính điểm số chất lượng của các vùng khó nằm trong ROI hiện tại
     def _hard_target_scores(self, roi: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
         if len(self.hard_boxes) == 0:
             return np.zeros((0,), dtype=np.float32), np.zeros((0,), dtype=bool)
@@ -580,6 +598,7 @@ class SliceEnv:
         target_scores = np.where(context_mask, size_scores, 0.0).astype(np.float32)
         return target_scores, target_scores > 0.0
 
+    # giải thích: Tính điểm số chất lượng vùng khó trên GPU (sử dụng PyTorch) để tăng hiệu năng
     def _hard_target_scores_torch(self, roi: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
         assert self.box_device is not None and self.hard_boxes_t is not None
         roi_np = self.roi if roi is None else np.asarray(roi, dtype=np.float32).reshape(4)
@@ -667,6 +686,7 @@ class SliceEnv:
         window = grid[y1:y2, x1:x2]
         return float(np.clip(window.max() if window.size else 0.0, 0.0, 1.0))
 
+    # giải thích: Tính điểm số đại diện cho các mục tiêu có thể quan sát được trong ROI
     def _observable_target_score(self, roi: np.ndarray | None = None) -> float:
         roi = self.roi if roi is None else np.asarray(roi, dtype=np.float32).reshape(4)
         scores = np.asarray(self.det_scores, dtype=np.float32).reshape(-1)
@@ -694,6 +714,7 @@ class SliceEnv:
         objectness_score = self._objectness_roi_score(roi)
         return float(np.clip(proposal_score + objectness_score, 0.0, 4.0))
 
+    # giải thích: Trả về vector trạng thái biểu diễn toàn diện của môi trường
     def _state(self) -> np.ndarray:
         summary = detection_summary(
             boxes=self.det_boxes,
@@ -728,11 +749,13 @@ class SliceEnv:
             self.covered |= hit_mask
         return target_scores, hit_mask
 
+    # giải thích: Tính toán phần thưởng (reward) dựa trên cấu hình (simplified hoặc legacy)
     def _reward(self, action: Action, previous_roi: np.ndarray | None = None) -> tuple[float, dict]:
         if self.env_cfg.use_simplified_reward:
             return self._simplified_reward(action, previous_roi)
         return self._legacy_reward(action, previous_roi)
 
+    # giải thích: Hàm tính phần thưởng đơn giản hóa dựa trên diện tích, độ phóng đại, độ trùng lặp và số lượng mục tiêu mới tìm thấy
     def _simplified_reward(self, action: Action, previous_roi: np.ndarray | None = None) -> tuple[float, dict]:
         prev_covered = self.covered.copy()
         commit_hits = action == Action.STOP
@@ -786,14 +809,17 @@ class SliceEnv:
             "detected_overlap": detected_overlap,
         }
 
+        # giải thích: Thưởng nếu chọn dừng và bao phủ được các mục tiêu mới chưa từng được bao phủ
         if action == Action.STOP and new_hits > 0:
             reward += cfg.target_reward * float(new_hits)
             density = target_score * cfg.max_roi_area_ratio / max(roi_area_ratio, 1e-6)
             reward += cfg.target_reward * 0.3 * float(np.clip(density, 0.0, 3.0))
 
+        # giải thích: Phạt chi phí mỗi bước đi để khuyến khích agent kết thúc nhanh hơn
         step_cost = 0.05 + roi_area_ratio * 0.5
         reward -= cfg.efficiency_weight * step_cost
 
+        # giải thích: Phạt nếu vi phạm các ràng buộc về diện tích lát cắt, scale gain hoặc trùng lặp với lát cắt cũ
         constraint_penalty = 0.0
         if roi_area_ratio > cfg.max_roi_area_ratio:
             overflow = roi_area_ratio / max(cfg.max_roi_area_ratio, 1e-6) - 1.0
@@ -808,6 +834,7 @@ class SliceEnv:
         reward -= cfg.constraint_weight * constraint_penalty
         reward -= cfg.detected_overlap_penalty * detected_overlap
 
+        # giải thích: Thêm điểm thưởng bonus khi dừng đúng lúc trên các mục tiêu chất lượng
         if action == Action.STOP:
             if total_target_score > 0.0 and old_slice_overlap < cfg.old_slice_overlap_threshold:
                 quality = min(total_target_score, 4.0)
@@ -819,6 +846,7 @@ class SliceEnv:
 
         return float(reward), info
 
+    # giải thích: Hàm tính phần thưởng nguyên bản (legacy) với các trọng số phạt và thưởng chi tiết hơn
     def _legacy_reward(self, action: Action, previous_roi: np.ndarray | None = None) -> tuple[float, dict]:
         prev_covered = self.covered.copy()
         commit_hits = action == Action.STOP
@@ -875,6 +903,7 @@ class SliceEnv:
             "detected_overlap": 0.0,
         }
 
+        # giải thích: Tính thưởng/phạt dựa trên sự bao phủ vùng khó
         if len(self.hard_boxes) > 0:
             if action == Action.STOP and new_hits > 0:
                 reward += self.env_cfg.new_hard_reward * new_hits
@@ -897,6 +926,7 @@ class SliceEnv:
             reward -= self.env_cfg.detected_overlap_penalty * detected_overlap
             info["detected_overlap"] = detected_overlap
 
+        # giải thích: Phạt bổ sung dựa trên diện tích lớn, scale gain thấp và độ trùng lặp cao
         reward -= self.env_cfg.area_penalty * roi_area_ratio
         if roi_area_ratio > self.env_cfg.max_roi_area_ratio:
             overflow = roi_area_ratio / max(self.env_cfg.max_roi_area_ratio, 1e-6) - 1.0
@@ -908,6 +938,7 @@ class SliceEnv:
             overflow = old_slice_overlap / max(self.env_cfg.old_slice_overlap_threshold, 1e-6) - 1.0
             reward -= self.env_cfg.old_slice_overlap_penalty * (1.0 + overflow)
 
+        # giải thích: Điểm thưởng hoặc phạt cho hành động kết thúc (STOP)
         if action == Action.STOP:
             if total_target_score > 0.0 and old_slice_overlap < self.env_cfg.old_slice_overlap_threshold:
                 stop_quality = min(total_target_score, 4.0)

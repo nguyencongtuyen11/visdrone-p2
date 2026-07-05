@@ -5,10 +5,14 @@ from dataclasses import dataclass
 import numpy as np
 
 
+# giải thích: Lớp dữ liệu EnvConfig định nghĩa các siêu tham số cấu hình cho môi trường cắt lát SliceEnv
 @dataclass(slots=True)
 class EnvConfig:
+    # giải thích: Các tham số giới hạn số bước đi và số lát cắt tối đa trong một tập (episode)
     max_steps: int = 20
     max_slices: int = 8
+    
+    # giải thích: Cấu hình kích thước và tỷ lệ thay đổi (dịch chuyển, zoom) của vùng cắt (ROI)
     initial_slice_fraction: float = 0.28
     move_fraction: float = 0.30
     zoom_factor: float = 0.75
@@ -24,8 +28,12 @@ class EnvConfig:
     high_conf_threshold: float = 0.5
     old_slice_overlap_threshold: float = 0.5
     min_new_hits_to_accept: int = 1
+    
+    # giải thích: Cấu hình tính toán hộp bọc bằng GPU để tăng tốc độ
     use_gpu_box_ops: bool = True
     gpu_box_device: str = "cuda"
+    
+    # giải thích: Thiết lập các hệ số và trọng số phạt / thưởng trong hàm phần thưởng (reward function)
     use_simplified_reward: bool = True
     target_reward: float = 0.75
     efficiency_weight: float = 0.5
@@ -51,6 +59,7 @@ class EnvConfig:
     old_slice_overlap_penalty: float = 3.0
 
 
+# giải thích: Lớp dữ liệu chứa kết quả phản hồi sau mỗi bước hành động (step) của agent trên môi trường
 @dataclass(slots=True)
 class StepResult:
     state: np.ndarray

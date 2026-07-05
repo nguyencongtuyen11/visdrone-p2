@@ -1,0 +1,9 @@
+# S1-crop-long: crop-outcome reward, train 1000 ep (đẩy tiếp best model).
+includes:
+  - local.yaml
+paths:
+  dqn_out_dir: runs/sweep/s1croplong/dqn
+  checkpoint: runs/sweep/s1croplong/dqn/best.pt
+train:
+  use_crop_outcome_reward: true
+  episodes: 1000

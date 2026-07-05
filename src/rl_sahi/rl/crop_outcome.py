@@ -22,6 +22,7 @@ from rl_sahi.inference.merge import (
 )
 
 
+# giải thích: Lớp dữ liệu CropOutcome chứa kết quả đánh giá của một vùng cắt (crop)
 @dataclass(slots=True)
 class CropOutcome:
     boxes: np.ndarray
@@ -35,6 +36,7 @@ class CropOutcome:
     reward: float
     accepted: bool
 
+    # giải thích: Trả về thông tin đánh giá dưới dạng một từ điển để ghi log hoặc phân tích
     def info(self) -> dict[str, int | float | bool]:
         return {
             "crop_new_detection_gain": int(self.new_detection_gain),
@@ -47,6 +49,7 @@ class CropOutcome:
         }
 
 
+# giải thích: Lớp CropOutcomeEvaluator đánh giá chất lượng phát hiện vật thể trên vùng cắt lát so với ảnh gốc và nhãn đúng (ground truth)
 class CropOutcomeEvaluator:
     def __init__(
         self,
@@ -80,6 +83,7 @@ class CropOutcomeEvaluator:
         self.empty_penalty = float(empty_penalty)
         self.no_gain_penalty = float(no_gain_penalty)
 
+    # giải thích: Lấy các dự đoán trên toàn bộ ảnh gốc có độ tin cậy thỏa mãn ngưỡng
     def full_predictions(self, det: DetectionCache) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         mask = np.asarray(det.scores, dtype=np.float32).reshape(-1) >= float(self.cfg.output_conf)
         boxes = np.asarray(det.boxes, dtype=np.float32).reshape(-1, 4)[mask]
@@ -87,6 +91,7 @@ class CropOutcomeEvaluator:
         classes = self.cfg.class_mapping.map_model_classes(det.classes[mask])
         return self._filter_classes(boxes, scores, classes)
 
+    # giải thích: Tính toán số lượng phát hiện mới ban đầu sau khi thực hiện việc hợp nhất các dự đoán
     def initial_new_count(
         self,
         full_boxes: np.ndarray,
@@ -106,6 +111,7 @@ class CropOutcomeEvaluator:
         )
         return int(slice_count)
 
+    # giải thích: Xác định xem có nên bỏ qua bước đánh giá cuối cùng dựa trên thông tin trạng thái môi trường không
     def should_skip_terminal(self, info: dict) -> bool:
         if info.get("stop_due_to_old_overlap", False):
             return True
@@ -117,6 +123,7 @@ class CropOutcomeEvaluator:
             return True
         return False
 
+    # giải thích: Thực hiện đánh giá vùng cắt lát bằng cách chạy YOLO trực tiếp trên vùng cắt đó
     def evaluate(
         self,
         image_path: Path | str,
@@ -147,6 +154,7 @@ class CropOutcomeEvaluator:
             raw_classes=raw_classes,
         )
 
+    # giải thích: Đánh giá chất lượng và tính toán phần thưởng từ các dự đoán YOLO đã có sẵn trên vùng cắt
     def evaluate_from_predictions(
         self,
         image_path: Path | str,
@@ -165,6 +173,7 @@ class CropOutcomeEvaluator:
         image_path = self._resolve_image_path(image_path)
         classes = self.cfg.class_mapping.map_model_classes(raw_classes)
         boxes, scores, classes = self._filter_classes(raw_boxes, raw_scores, classes)
+        # giải thích: Tính toán lượng thông tin mới phát hiện (new_detection_gain và new_detection_utility)
         new_detection_gain = new_detection_gain_after_merge(
             det.image_shape,
             self.cfg.merge_iou,
@@ -187,6 +196,7 @@ class CropOutcomeEvaluator:
             classes,
             duplicate_iou=self.cfg.duplicate_iou,
         )
+        # giải thích: Tính toán độ tăng trưởng True Positive (tp_gain) và False Positive (fp_gain) so với Ground Truth
         tp_gain, fp_gain = self._tp_fp_gain(
             image_path,
             det.image_shape,
@@ -200,6 +210,7 @@ class CropOutcomeEvaluator:
             scores,
             classes,
         )
+        # giải thích: Công thức tính toán phần thưởng (reward) kết hợp độ tiện ích phát hiện, TP và FP
         reward = self.detection_reward * max(float(new_detection_utility), 0.0)
         reward += self.tp_reward * max(float(tp_gain), 0.0)
         reward -= self.fp_penalty * max(float(fp_gain), 0.0)
@@ -207,6 +218,7 @@ class CropOutcomeEvaluator:
             reward -= self.empty_penalty
         elif new_detection_gain <= 0:
             reward -= self.no_gain_penalty
+        # giải thích: Kiểm tra vùng cắt có được chấp nhận hay không dựa trên các ngưỡng cấu hình
         accepted = (
             new_detection_gain >= int(self.cfg.min_slice_detections)
             and new_detection_utility >= float(self.cfg.min_slice_utility)
@@ -224,6 +236,7 @@ class CropOutcomeEvaluator:
             accepted=bool(accepted),
         )
 
+    # giải thích: Lọc các hộp dự đoán thuộc các lớp mục tiêu được quan tâm
     def _filter_classes(
         self,
         boxes: np.ndarray,
@@ -239,6 +252,7 @@ class CropOutcomeEvaluator:
         mask = np.isin(classes.astype(np.int64), target)
         return boxes[mask], scores[mask], classes[mask]
 
+    # giải thích: Giải quyết đường dẫn tuyệt đối của ảnh, kiểm tra tính tồn tại của ảnh trong thư mục gốc
     def _resolve_image_path(self, image_path: Path | str) -> Path:
         path = Path(image_path)
         if path.exists():
@@ -248,9 +262,11 @@ class CropOutcomeEvaluator:
             return candidate
         return path
 
+    # giải thích: Lấy các dự đoán trên một vùng cắt duy nhất
     def _crop_predictions(self, image_path: Path, roi: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         return self.crop_predictions_many([image_path], [roi])[0]
 
+    # giải thích: Thực hiện suy luận mô hình YOLO song song trên danh sách nhiều vùng cắt (crops), sử dụng bộ đệm (cache) để tăng tốc độ nếu có sẵn
     def crop_predictions_many(
         self,
         image_paths: list[Path | str],
@@ -264,6 +280,8 @@ class CropOutcomeEvaluator:
         missing_rois: list[np.ndarray] = []
         missing_cache_paths: list[Path] = []
         missing_metadata: list[dict[str, Any]] = []
+        
+        # giải thích: Duyệt qua các vùng cắt và kiểm tra xem có tệp cache kết quả suy luận tương ứng không
         for index, (image_path, roi) in enumerate(zip(image_paths, rois)):
             resolved_path = self._resolve_image_path(image_path)
             metadata = self._metadata(resolved_path, roi)
@@ -279,6 +297,7 @@ class CropOutcomeEvaluator:
             missing_cache_paths.append(path)
             missing_metadata.append(metadata)
 
+        # giải thích: Nếu thiếu cache, tiến hành chạy YOLO trên các vùng cắt đó rồi lưu lại vào bộ nhớ đệm
         if missing_indices:
             predictions = run_yolo_on_crops(
                 self.model,
@@ -308,6 +327,7 @@ class CropOutcomeEvaluator:
         )
         return [item if item is not None else empty for item in outputs]
 
+    # giải thích: Tính toán độ tăng trưởng TP (True Positive) và FP (False Positive) so với nhãn đúng khi thêm vùng cắt mới vào ảnh
     def _tp_fp_gain(
         self,
         image_path: Path,
@@ -325,6 +345,7 @@ class CropOutcomeEvaluator:
         if self.label_root is None:
             return 0, 0
         gt_boxes, gt_classes = self._ground_truth(image_path, image_shape)
+        # giải thích: Hợp nhất các dự đoán trước khi có vùng cắt hiện tại
         before_boxes, before_scores, before_classes = _merge_predictions(
             image_shape,
             self.cfg.merge_iou,
@@ -332,6 +353,7 @@ class CropOutcomeEvaluator:
             [full_scores, *slice_scores_parts],
             [full_classes, *slice_classes_parts],
         )
+        # giải thích: Hợp nhất các dự đoán sau khi đã thêm vùng cắt hiện tại
         after_boxes, after_scores, after_classes = _merge_predictions(
             image_shape,
             self.cfg.merge_iou,
@@ -339,6 +361,7 @@ class CropOutcomeEvaluator:
             [full_scores, *slice_scores_parts, scores],
             [full_classes, *slice_classes_parts, classes],
         )
+        # giải thích: Tính toán số lượng TP và FP của các trạng thái trước và sau để lấy hiệu số độ lợi
         before_tp, before_fp = _match_counts(
             before_boxes,
             before_scores,
@@ -357,6 +380,7 @@ class CropOutcomeEvaluator:
         )
         return int(after_tp - before_tp), int(after_fp - before_fp)
 
+    # giải thích: Tải nhãn Ground Truth (độ phân giải thực tế) và áp dụng bộ lọc các lớp mục tiêu
     def _ground_truth(self, image_path: Path, image_shape: tuple[int, int]) -> tuple[np.ndarray, np.ndarray]:
         assert self.label_root is not None
         classes, boxes = read_yolo_labels(image_to_label_path(image_path, self.image_root, self.label_root), image_shape)
@@ -368,6 +392,7 @@ class CropOutcomeEvaluator:
             classes = classes[mask]
         return boxes.astype(np.float32), classes.astype(np.float32)
 
+    # giải thích: Tạo siêu dữ liệu cấu hình đặc trưng cho vùng cắt và mô hình để làm khóa lưu trữ bộ đệm (metadata hash)
     def _metadata(self, image_path: Path, roi: np.ndarray) -> dict[str, Any]:
         weights = None
         if self.weights is not None:
@@ -388,11 +413,13 @@ class CropOutcomeEvaluator:
             "max_det": int(self.cfg.max_det),
         }
 
+    # giải thích: Trả về đường dẫn của tệp cache .npz dựa trên hàm băm SHA1 của metadata
     def _cache_path(self, image_path: Path, metadata: dict[str, Any]) -> Path:
         payload = json.dumps(metadata, sort_keys=True, separators=(",", ":"))
         digest = hashlib.sha1(payload.encode("utf-8")).hexdigest()
         return self.cache_root / "crop_outcomes" / self.split / image_id(image_path) / f"{digest}.npz"
 
+    # giải thích: Tải dữ liệu dự đoán từ tệp cache .npz nếu thông tin băm trùng khớp
     def _load_cache(
         self,
         path: Path,
@@ -412,6 +439,7 @@ class CropOutcomeEvaluator:
         except Exception:
             return None
 
+    # giải thích: Lưu các dự đoán trên vùng cắt vào bộ đệm cache .npz dưới dạng nén
     def _save_cache(
         self,
         path: Path,
@@ -462,6 +490,7 @@ def _merged_source_counts(
     )
 
 
+# giải thích: Khớp các dự đoán với nhãn đúng bằng IoU để đếm số lượng TP và FP một cách chính xác
 def _match_counts(
     boxes: np.ndarray,
     scores: np.ndarray,
@@ -477,6 +506,7 @@ def _match_counts(
     gt_classes = np.asarray(gt_classes, dtype=np.float32).reshape(-1)
     if len(boxes) == 0:
         return 0, 0
+    # giải thích: Sắp xếp các dự đoán giảm dần theo độ tin cậy (confidence score)
     order = np.argsort(scores)[::-1]
     matched = np.zeros((len(gt_boxes),), dtype=bool)
     tp = 0
@@ -490,6 +520,7 @@ def _match_counts(
         ious = iou_matrix(boxes[idx].reshape(1, 4), gt_boxes[gt_idx])[0]
         best_local = int(ious.argmax())
         best = int(gt_idx[best_local])
+        # giải thích: Nếu IoU lớn hơn hoặc bằng ngưỡng và nhãn đúng chưa được khớp, tính là TP, ngược lại là FP
         if float(ious[best_local]) >= iou_threshold and not matched[best]:
             matched[best] = True
             tp += 1

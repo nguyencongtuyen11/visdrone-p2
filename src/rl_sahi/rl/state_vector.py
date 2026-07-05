@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 
+# giải thích: Chuẩn hóa vector đặc trưng ảnh (L2 normalization) và giới hạn các giá trị cực đoan để giữ tính ổn định
 def normalize_feature(feature: np.ndarray) -> np.ndarray:
     feature = np.asarray(feature, dtype=np.float32).reshape(-1)
     if feature.size == 0:
@@ -14,6 +15,7 @@ def normalize_feature(feature: np.ndarray) -> np.ndarray:
     return np.clip(feature, -5.0, 5.0).astype(np.float32)
 
 
+# giải thích: Hàm hợp nhất tất cả các bản đồ không gian và vector thống kê thành một vector trạng thái phẳng duy nhất làm đầu vào cho mô hình Q
 def build_state_vector(
     feature: np.ndarray,
     history: np.ndarray,
@@ -44,6 +46,8 @@ def build_state_vector(
             posinf=0.0,
             neginf=0.0,
         )
+        
+    # giải thích: Nối tất cả các thành phần theo thứ tự xác định để đảm bảo tính nhất quán của trạng thái đầu vào
     return np.concatenate(
         [
             feature_part,

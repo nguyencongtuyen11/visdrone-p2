@@ -1,0 +1,25 @@
+# ============================================================================
+# FT.YAML — dùng YOLO11 ĐÃ FINE-TUNE trên VisDrone (10 lớp, detector ra thẳng 0-9).
+# Cache RIÊNG (cache_ft) để KHÔNG đụng cache/kết quả frozen cũ.
+# Class mapping = đồng nhất; đánh giá đủ 10 lớp (kể cả van/tricycle/awning).
+# ============================================================================
+includes:
+  - default.yaml
+
+paths:
+  weights: best_visdrone.pt
+  cache_root: D:/rlsahi_data/cache_ft
+
+classes:
+  model_to_label: {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9}
+  label_to_eval:  {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9}
+
+detect:
+  conf: 0.01
+
+hard_region:
+  target_classes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+infer:
+  output_conf: 0.10
+  target_classes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

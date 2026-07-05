@@ -1,0 +1,5 @@
+includes:
+  - ft.yaml
+benchmark:
+  topk_slices: 4
+  topk_slice_fraction: 0.30

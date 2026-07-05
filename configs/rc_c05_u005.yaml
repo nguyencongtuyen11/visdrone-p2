@@ -1,0 +1,7 @@
+# conf=0.05, min_slice_utility=0.05 (chấp nhận nhiều slice hơn -> tăng recall). Inference-only.
+includes:
+  - default.yaml
+infer:
+  output_conf: 0.05
+  min_slice_utility: 0.05
+  min_slice_detections: 1

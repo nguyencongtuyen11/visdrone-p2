@@ -17,6 +17,7 @@ from rl_sahi.common.cache import (
 from rl_sahi.common.data import iter_images
 
 
+# giải thích: Lớp dữ liệu CachedSample lưu giữ đường dẫn và các đối tượng cache đã tải cho một mẫu ảnh cụ thể
 @dataclass(slots=True)
 class CachedSample:
     image_path: Path
@@ -26,6 +27,7 @@ class CachedSample:
     hard_region: HardRegionCache | None = None
 
 
+# giải thích: Lớp CachedEpisodeDataset quản lý tập hợp các mẫu huấn luyện/đánh giá sử dụng các tệp cache đã tạo trước
 class CachedEpisodeDataset:
     def __init__(
         self,
@@ -44,6 +46,8 @@ class CachedEpisodeDataset:
         self.missing_detection = 0
         self.stale_detection = 0
         self.missing_hard_region = 0
+        
+        # giải thích: Lặp qua danh sách ảnh và kiểm tra tính hợp lệ, tính mới của tệp cache phát hiện và cache vùng khó
         for image_path in iter_images(self.image_root, split=split, limit=limit):
             self.total_images += 1
             det_path = detection_cache_path(self.cache_root, split, image_path)
@@ -51,6 +55,8 @@ class CachedEpisodeDataset:
             det_exists = det_path.exists()
             det_current = det_exists and detection_cache_is_current(det_path, detection_metadata)
             hard_exists = hard_path.exists()
+            
+            # giải thích: Chỉ sử dụng các mẫu có cả hai tệp cache phát hiện (mới nhất) và cache vùng khó tồn tại
             if det_current and hard_exists:
                 detection = load_detection_cache(det_path) if preload else None
                 hard_region = load_hard_region_cache(hard_path) if preload else None
@@ -62,6 +68,8 @@ class CachedEpisodeDataset:
                     self.stale_detection += 1
                 if not hard_exists:
                     self.missing_hard_region += 1
+                    
+        # giải thích: Báo lỗi nếu không tìm thấy mẫu cache hợp lệ nào
         if not self.samples:
             raise FileNotFoundError(
                 f"No paired current detection/hard-region caches found for split '{split}'. "
@@ -77,12 +85,14 @@ class CachedEpisodeDataset:
     def __len__(self) -> int:
         return len(self.samples)
 
+    # giải thích: Chọn một tập ngẫu nhiên và tải cache của nó lên để phục vụ vòng huấn luyện tiếp theo
     def random_episode(self):
         sample = random.choice(self.samples)
         if sample.detection is not None and sample.hard_region is not None:
             return sample.detection, sample.hard_region
         return load_detection_cache(sample.detection_path), load_hard_region_cache(sample.hard_region_path)
 
+    # giải thích: Lấy cache phát hiện đầu tiên để trích xuất các tham số kích thước không gian trạng thái ban đầu
     def first_detection(self):
         sample = self.samples[0]
         if sample.detection is not None:

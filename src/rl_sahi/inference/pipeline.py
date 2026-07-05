@@ -1,13 +1,16 @@
+# Cho phép import các annotation nâng cao từ tương lai
 from __future__ import annotations
 
-import json
-from pathlib import Path
+import json                  # Thư viện JSON xử lý lưu siêu dữ liệu
+from pathlib import Path     # Thư viện xử lý đường dẫn
 
-import numpy as np
-import torch
-from ultralytics import YOLO
+import numpy as np           # Thư viện tính toán NumPy
+import torch                 # Thư viện mạng nơ-ron PyTorch
+from ultralytics import YOLO  # Thư viện YOLO Ultralytics
 
+# Import các hàm tiện ích hình học từ common.boxes
 from rl_sahi.common.boxes import area, clip_boxes, intersection_matrix
+# Import các hàm tiện ích liên quan đến cache
 from rl_sahi.common.cache import (
     DetectionCache,
     detection_cache_is_current,
@@ -16,12 +19,14 @@ from rl_sahi.common.cache import (
     load_detection_cache,
     save_detection_cache,
 )
+# Import ánh xạ class và tải cấu hình mặc định
 from rl_sahi.common.class_mapping import ClassMapping
 from rl_sahi.common.config import ProjectConfig, load_default_config
 from rl_sahi.common.device import DeviceLike, resolve_torch_device
 from rl_sahi.detection.yolo import detect_one_image, load_yolo
 from rl_sahi.inference.config import InferenceConfig
 from rl_sahi.inference.crops import run_yolo_on_crop
+# Import các thuật toán gộp và đo lường từ common.merge
 from rl_sahi.inference.merge import (
     class_aware_nms,
     new_detection_gain_after_merge,
@@ -29,6 +34,7 @@ from rl_sahi.inference.merge import (
     save_prediction_txt,
     source_counts_after_merge,
 )
+# Import các module bổ trợ RL
 from rl_sahi.inference.rollout import rollout_one_slice
 from rl_sahi.inference.visualize import save_inference_visual
 from rl_sahi.rl.checkpoint import load_policy
@@ -37,6 +43,9 @@ from rl_sahi.rl.state_config import StateConfig
 
 
 def _class_mask(classes: np.ndarray, target_classes: tuple[int, ...]) -> np.ndarray:
+    """
+    Tạo mảng lọc boolean để xác định các nhãn lớp có thuộc lớp mục tiêu (target_classes) hay không.
+    """
     classes = np.asarray(classes, dtype=np.float32).reshape(-1)
     if not target_classes:
         return np.ones((len(classes),), dtype=bool)
@@ -49,6 +58,9 @@ def _filter_classes(
     classes: np.ndarray,
     target_classes: tuple[int, ...],
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Lọc các hộp giới hạn, điểm số và lớp đối tượng, chỉ giữ lại những lớp thuộc target_classes.
+    """
     mask = _class_mask(classes, target_classes)
     return boxes[mask], scores[mask], classes[mask]
 
@@ -63,6 +75,9 @@ def _merged_source_counts(
     image_shape: tuple[int, int],
     merge_iou: float,
 ) -> tuple[int, int]:
+    """
+    Tính số lượng phát hiện cuối cùng thuộc ảnh gốc và lát cắt.
+    """
     return source_counts_after_merge(
         full_boxes,
         full_scores,
@@ -89,6 +104,9 @@ def _new_detection_gain(
     merge_iou: float,
     duplicate_iou: float | None = None,
 ) -> int:
+    """
+    Tính số lượng hộp mới phát hiện thành công qua lát cắt ứng viên mới.
+    """
     return new_detection_gain_after_merge(
         image_shape,
         merge_iou,
@@ -116,6 +134,9 @@ def _new_detection_utility(
     merge_iou: float,
     duplicate_iou: float | None = None,
 ) -> float:
+    """
+    Tính toán điểm tiện ích (utility) thu hoạch được từ các hộp mới phát hiện.
+    """
     return new_detection_utility_after_merge(
         image_shape,
         merge_iou,
@@ -130,6 +151,10 @@ def _new_detection_utility(
 
 
 def _attempt_overlap(roi: np.ndarray, attempted_rois: list[np.ndarray]) -> float:
+    """
+    Tính toán tỷ lệ chồng lấn lớn nhất của ROI ứng viên hiện tại với tất cả các ROI đã quét trước đó.
+    Dùng để phát hiện xem tác tử RL có quét lặp lại một vùng cũ hay không.
+    """
     if not attempted_rois:
         return 0.0
     previous = np.stack(attempted_rois).astype(np.float32)
@@ -144,6 +169,10 @@ def _checkpoint_detection_mismatches(
     cfg: InferenceConfig,
     state_cfg: StateConfig,
 ) -> list[str]:
+    """
+    Kiểm tra sự không khớp cấu hình giữa checkpoint mô hình RL và cấu hình suy luận hiện tại.
+    Đảm bảo tính nhất quán của mạng nơ-ron DQN.
+    """
     if not isinstance(metadata, dict) or not metadata:
         return []
     expected = {
@@ -187,6 +216,9 @@ def get_initial_detection(
     split: str | None = None,
     use_cache: bool = True,
 ) -> DetectionCache:
+    """
+    Tải cache hoặc thực hiện chạy YOLO ảnh gốc lần đầu để lấy các boxes và feature maps khởi điểm.
+    """
     expected_metadata = (
         detection_cache_metadata(
             weights=weights,
@@ -203,8 +235,10 @@ def get_initial_detection(
     )
     if cache_root is not None and split is not None:
         cache_path = detection_cache_path(cache_root, split, image_path)
+        # Nếu cache hợp lệ và được cấu hình dùng cache, đọc trực tiếp từ cache để tăng tốc
         if use_cache and detection_cache_is_current(cache_path, expected_metadata):
             return load_detection_cache(cache_path)
+        # Ngược lại chạy YOLO phát hiện và lưu cache mới
         det = detect_one_image(
             model=model,
             image_path=image_path,
@@ -220,6 +254,8 @@ def get_initial_detection(
         det.metadata = expected_metadata
         save_detection_cache(cache_path, det)
         return det
+        
+    # Trường hợp không dùng thư mục cache lưu trữ lâu dài
     det = detect_one_image(
         model=model,
         image_path=image_path,
@@ -237,12 +273,19 @@ def get_initial_detection(
 
 
 class AdaptiveSahiInferencer:
+    """
+    Bộ suy luận thích ứng (Adaptive SAHI) kết hợp YOLO và tác tử học tăng cường (RL DQN).
+    Tự động chọn các vùng cần cắt lát dựa trên trạng thái phát hiện để tối ưu mAP và giảm số lượng crop.
+    """
     def __init__(self, weights: Path, checkpoint: Path, cfg: InferenceConfig) -> None:
         self.cfg = cfg
         self.device_t = resolve_torch_device(cfg.device)
+        # Tải mô hình RL policy và thông số huấn luyện đi kèm
         self.policy, checkpoint_data = load_policy(checkpoint, self.device_t)
         self.env_cfg = checkpoint_data["env_cfg_obj"]
         self.state_cfg = checkpoint_data.get("state_cfg_obj", StateConfig())
+        
+        # Kiểm tra tính đồng bộ
         mismatches = _checkpoint_detection_mismatches(
             checkpoint_data.get("detection_metadata"),
             cfg,
@@ -254,6 +297,7 @@ class AdaptiveSahiInferencer:
                 + "; ".join(mismatches)
             )
         self.weights = Path(weights)
+        # Tải mô hình YOLO
         self.yolo = load_yolo(weights, device=self.device_t)
 
     def infer_image(
@@ -264,7 +308,11 @@ class AdaptiveSahiInferencer:
         split: str | None = None,
         use_cache: bool = True,
     ) -> dict:
+        """
+        Khởi chạy suy luận thích ứng trên 1 file ảnh cụ thể.
+        """
         cfg = self.cfg
+        # Bước 1: Chạy YOLO trên ảnh gốc để lấy các phát hiện khởi điểm
         det = get_initial_detection(
             model=self.yolo,
             weights=self.weights,
@@ -282,6 +330,7 @@ class AdaptiveSahiInferencer:
             use_cache=use_cache,
         )
 
+        # Bước 2: Bắt đầu tiến trình vòng lặp RL quyết định cắt lát ảnh và lưu đầu ra
         return _infer_with_loaded(
             image_path=image_path,
             out_dir=out_dir,
@@ -306,29 +355,40 @@ def _infer_with_loaded(
     det: DetectionCache,
     cfg: InferenceConfig,
 ) -> dict:
+    """
+    Tiến hành vòng lặp RL Rollout để quyết định cắt lát ảnh và tổng hợp kết quả cuối cùng.
+    """
+    accepted_rois: list[np.ndarray] = []  # Các ROI (lát cắt) được chấp nhận do phát hiện thêm đối tượng mới
+    rejected_rois: list[np.ndarray] = []  # Các ROI bị từ chối
+    attempted_rois: list[np.ndarray] = [] # Toàn bộ các ROI đã được quét thử qua
+    
+    slice_boxes_all: list[np.ndarray] = []   # Lưu tọa độ hộp phát hiện từ các lát cắt được chấp nhận
+    slice_scores_all: list[np.ndarray] = []  # Lưu score
+    slice_classes_all: list[np.ndarray] = [] # Lưu nhãn lớp
+    slice_meta: list[dict] = []              # Siêu dữ liệu từng lượt quét
 
-    accepted_rois: list[np.ndarray] = []
-    rejected_rois: list[np.ndarray] = []
-    attempted_rois: list[np.ndarray] = []
-    slice_boxes_all: list[np.ndarray] = []
-    slice_scores_all: list[np.ndarray] = []
-    slice_classes_all: list[np.ndarray] = []
-    slice_meta: list[dict] = []
-
+    # Lọc các hộp phát hiện trên ảnh gốc bằng ngưỡng tin cậy đầu ra
     full_mask = det.scores >= cfg.output_conf
     full_boxes = det.boxes[full_mask]
     full_scores = det.scores[full_mask]
     full_classes = cfg.class_mapping.map_model_classes(det.classes[full_mask])
+    
+    # Chỉ giữ các lớp mục tiêu
     full_boxes, full_scores, full_classes = _filter_classes(
         full_boxes,
         full_scores,
         full_classes,
         cfg.target_classes,
     )
+    
+    # Xác định giới hạn tối đa số lượt chạy thử quét
     max_attempts = int(cfg.max_slice_attempts) if cfg.max_slice_attempts > 0 else int(env_cfg.max_slices * 2)
+    
+    # Vòng lặp chính: RL tác tử tương tác với môi trường để đưa ra vị trí lát cắt tiếp theo
     for attempt_idx in range(1, max_attempts + 1):
         if len(accepted_rois) >= env_cfg.max_slices:
             break
+            
         history_arr = (
             np.stack(attempted_rois).astype(np.float32)
             if attempted_rois
@@ -339,6 +399,8 @@ def _infer_with_loaded(
             if accepted_rois
             else np.zeros((0, 4), dtype=np.float32)
         )
+        
+        # Khởi tạo môi trường mô phỏng lát cắt (SliceEnv) cho bước hiện tại
         env = SliceEnv(
             det,
             None,
@@ -349,7 +411,11 @@ def _infer_with_loaded(
             target_classes=cfg.target_classes,
             class_mapping=cfg.class_mapping,
         )
+        
+        # Tác tử RL chạy suy luận chính sách để đưa ra hộp ROI mục tiêu
         roi, actions, info = rollout_one_slice(policy, env, device_t)
+        
+        # Xử lý các điều kiện dừng sớm hoặc từ chối do trùng lặp lát cắt cũ
         if info.get("stop_due_to_old_overlap", False):
             repeat_attempt_overlap = _attempt_overlap(roi, attempted_rois)
             attempted_rois.append(roi)
@@ -373,6 +439,7 @@ def _infer_with_loaded(
             if repeat_attempt_overlap >= 0.95:
                 break
             continue
+            
         if info.get("stop_due_to_attempted_overlap", False):
             repeat_attempt_overlap = _attempt_overlap(roi, attempted_rois)
             attempted_rois.append(roi)
@@ -396,6 +463,7 @@ def _infer_with_loaded(
             if repeat_attempt_overlap >= 0.95:
                 break
             continue
+            
         if cfg.require_stop_for_acceptance and info.get("stop_due_to_max_steps", False):
             repeat_attempt_overlap = _attempt_overlap(roi, attempted_rois)
             attempted_rois.append(roi)
@@ -419,6 +487,7 @@ def _infer_with_loaded(
             if repeat_attempt_overlap >= 0.95:
                 break
             continue
+            
         if cfg.require_stop_for_acceptance and info.get("stop_due_to_stalled_roi", False):
             repeat_attempt_overlap = _attempt_overlap(roi, attempted_rois)
             attempted_rois.append(roi)
@@ -443,6 +512,7 @@ def _infer_with_loaded(
                 break
             continue
 
+        # Nếu ROI được đề xuất hợp lệ, thực thi YOLO trên ROI lát cắt này
         boxes_i, scores_i, classes_i = run_yolo_on_crop(
             yolo,
             image_path,
@@ -456,6 +526,8 @@ def _infer_with_loaded(
         classes_i = cfg.class_mapping.map_model_classes(classes_i)
         boxes_i, scores_i, classes_i = _filter_classes(boxes_i, scores_i, classes_i, cfg.target_classes)
         attempted_rois.append(roi)
+        
+        # Đo lường xem lát cắt này có cung cấp thêm phát hiện mới nào không
         new_detection_gain = _new_detection_gain(
             full_boxes,
             full_scores,
@@ -484,10 +556,13 @@ def _infer_with_loaded(
             cfg.merge_iou,
             cfg.duplicate_iou,
         )
+        
+        # Chấp nhận lát cắt nếu nó phát hiện thêm ít nhất min_slice_detections và đạt mức tiện ích tối thiểu
         accepted = (
             new_detection_gain >= int(cfg.min_slice_detections)
             and new_detection_utility >= float(cfg.min_slice_utility)
         )
+        
         if accepted:
             rejection_reason = None
         elif len(boxes_i) == 0:
@@ -498,6 +573,7 @@ def _infer_with_loaded(
             rejection_reason = "low_new_detection_utility"
         else:
             rejection_reason = "low_new_detection_count"
+            
         slice_index = None
         if accepted:
             accepted_rois.append(roi)
@@ -507,6 +583,7 @@ def _infer_with_loaded(
             slice_classes_all.append(classes_i)
         else:
             rejected_rois.append(roi)
+            
         slice_meta.append(
             {
                 "attempt_index": attempt_idx,
@@ -525,6 +602,7 @@ def _infer_with_loaded(
             }
         )
 
+    # Tổng hợp các hộp từ ảnh gốc và từ toàn bộ lát cắt đã được chấp nhận
     boxes_parts = [full_boxes] + slice_boxes_all
     scores_parts = [full_scores] + slice_scores_all
     classes_parts = [full_classes] + slice_classes_all
@@ -538,23 +616,29 @@ def _infer_with_loaded(
     classes = np.concatenate(classes_parts, axis=0) if classes_parts else np.zeros((0,), dtype=np.float32)
     sources = np.concatenate(sources_parts, axis=0) if sources_parts else np.zeros((0,), dtype=np.int32)
 
+    # Clip các hộp trong ảnh và gộp NMS lần cuối để ra kết quả phát hiện duy nhất
     boxes = clip_boxes(boxes, det.image_shape)
     keep = class_aware_nms(boxes, scores, classes, cfg.merge_iou)
     boxes, scores, classes, sources = boxes[keep], scores[keep], classes[keep], sources[keep]
 
+    # Thiết lập đường dẫn lưu kết quả đầu ra
     out_dir = Path(out_dir)
     pred_path = out_dir / "detections" / f"{image_path.stem}.txt"
     viz_path = out_dir / "visualizations" / f"{image_path.stem}.jpg"
     meta_path = out_dir / "metadata" / f"{image_path.stem}.json"
+    
     accepted_rois_array = (
         np.stack(accepted_rois).astype(np.float32) if accepted_rois else np.zeros((0, 4), dtype=np.float32)
     )
     rejected_rois_array = (
         np.stack(rejected_rois).astype(np.float32) if rejected_rois else np.zeros((0, 4), dtype=np.float32)
     )
+    
+    # Lưu tệp txt, hình ảnh trực quan hóa các lát cắt và file json lưu siêu dữ liệu (metadata)
     save_prediction_txt(pred_path, boxes, scores, classes, sources)
     save_inference_visual(image_path, boxes, sources, accepted_rois_array, rejected_rois_array, viz_path)
     meta_path.parent.mkdir(parents=True, exist_ok=True)
+    
     meta = {
         "image": str(image_path),
         "num_slices": len(accepted_rois),
@@ -570,6 +654,7 @@ def _infer_with_loaded(
 
 
 def _resolve_project_path(path: Path | str, root: Path) -> Path:
+    """Chuyển đổi đường dẫn tương đối thành tuyệt đối dựa trên thư mục gốc dự án."""
     value = Path(path).expanduser()
     return value if value.is_absolute() else root / value
 
@@ -627,6 +712,9 @@ def infer_one_image(
     class_mapping: ClassMapping | None = None,
     config: ProjectConfig | Path | str | None = None,
 ) -> dict:
+    """
+    Hàm wrapper đầu ngoài cho phép suy luận RL-SAHI trực tiếp trên 1 ảnh bằng cách chỉ định các tham số ghi đè.
+    """
     project_cfg = config if isinstance(config, ProjectConfig) else load_default_config(config)
     infer_cfg = project_cfg.section("infer")
     image_path = _resolve_project_path(image_path, project_cfg.root)
@@ -636,6 +724,7 @@ def infer_one_image(
     cache_root = _config_path_or_override(project_cfg, "cache_root", cache_root)
     use_cache = bool(infer_cfg.get("use_cache", True)) if use_cache is None else bool(use_cache)
 
+    # Thiết lập cấu hình InferenceConfig hoàn chỉnh
     cfg = InferenceConfig(
         full_imgsz=_value_or_config(infer_cfg, "full_imgsz", full_imgsz, int),
         slice_imgsz=_value_or_config(infer_cfg, "slice_imgsz", slice_imgsz, int),
@@ -668,6 +757,7 @@ def infer_one_image(
         ),
         class_mapping=class_mapping or ClassMapping.from_config(project_cfg.section("classes")),
     )
+    # Khởi tạo bộ suy luận và chạy
     inferencer = AdaptiveSahiInferencer(weights=weights, checkpoint=checkpoint, cfg=cfg)
     return inferencer.infer_image(
         image_path=image_path,
@@ -676,3 +766,4 @@ def infer_one_image(
         split=split,
         use_cache=use_cache,
     )
+

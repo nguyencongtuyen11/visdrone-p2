@@ -29,6 +29,7 @@ from rl_sahi.rl.state_config import StateConfig
 from rl_sahi.rl.state_layout import state_layout_from_detection
 
 
+# giải thích: Lớp cấu hình TrainConfig định nghĩa toàn bộ siêu tham số cho quá trình huấn luyện DQN
 @dataclass(slots=True)
 class TrainConfig:
     episodes: int = 20000
@@ -84,15 +85,20 @@ class TrainConfig:
     accepted_no_hard_penalty: float = 2.0
     rejected_crop_penalty: float = 0.5
 
+
+# giải thích: Hàm tính giá trị epsilon suy giảm dần theo thời gian phục vụ chính sách epsilon-greedy
 def epsilon_by_step(step: int, cfg: TrainConfig) -> float:
     frac = min(float(step) / max(cfg.epsilon_decay_steps, 1), 1.0)
     return cfg.epsilon_start + frac * (cfg.epsilon_end - cfg.epsilon_start)
 
+
+# giải thích: Hàm tính xác suất sử dụng hành động dẫn đường (guided action) suy giảm dần theo thời gian
 def guide_prob_by_step(step: int, cfg: TrainConfig) -> float:
     frac = min(float(step) / max(cfg.guide_decay_steps, 1), 1.0)
     return cfg.guide_prob_start + frac * (cfg.guide_prob_end - cfg.guide_prob_start)
 
 
+# giải thích: Hàm lựa chọn hành động dựa trên epsilon-greedy hoặc guided action
 def select_action(
     policy: QNetwork,
     state: np.ndarray,
@@ -104,12 +110,15 @@ def select_action(
     valid_actions = np.flatnonzero(env.valid_actions())
     if len(valid_actions) == 0:
         valid_actions = np.asarray([int(Action.STOP)], dtype=np.int64)
+    # giải thích: Với xác suất guide_prob, lựa chọn hành động dẫn đường (heuristic) để đẩy nhanh tốc độ hội tụ
     if random.random() < guide_prob:
         action = env.guided_action()
         if int(action) in set(int(x) for x in valid_actions):
             return action
+    # giải thích: Khám phá ngẫu nhiên
     if random.random() < epsilon:
         return Action(int(random.choice(valid_actions.tolist())))
+    # giải thích: Khai thác bằng cách dự đoán các giá trị Q từ mạng chính
     with torch.no_grad():
         x = torch.from_numpy(state).float().unsqueeze(0).to(device)
         q = policy(x)
@@ -118,6 +127,7 @@ def select_action(
         return Action(int(q.argmax(dim=1).item()))
 
 
+# giải thích: Cập nhật mềm (soft update) trọng số của mạng đích target network từ mạng chính policy network
 def soft_update(policy: QNetwork, target: QNetwork, tau: float) -> None:
     for tp, pp in zip(target.parameters(), policy.parameters()):
         tp.data.copy_(tau * pp.data + (1.0 - tau) * tp.data)
@@ -148,6 +158,7 @@ def _max_slice_attempts(env_cfg: EnvConfig, infer_cfg: InferenceConfig | None, m
     return max(int(slice_budget) * 2, int(slice_budget), 1)
 
 
+# giải thích: Tính toán phần thưởng cuối tập (terminal reward) kết hợp kết quả phát hiện của YOLO trên vùng cắt lát
 def _terminal_reward_with_crop_outcome(
     base_reward: float,
     outcome: CropOutcome,
@@ -168,6 +179,7 @@ def _terminal_reward_with_crop_outcome(
     return float(min(base_reward, 0.0) + negative_crop_reward - float(cfg.rejected_crop_penalty))
 
 
+# giải thích: Hàm tối ưu hóa mạng Q sử dụng một lô chuyển đổi trạng thái lấy ra từ replay buffer
 def optimize(
     policy: QNetwork,
     target: QNetwork,
@@ -190,6 +202,7 @@ def optimize(
 
     use_per = isinstance(replay, PrioritizedReplayBuffer)
     next_valid_actions = None
+    # giải thích: Lấy mẫu và trích xuất Importance Sampling weights nếu sử dụng PER
     if use_per:
         sample = replay.sample(batch_size)
         if len(sample) == 8:
@@ -212,6 +225,7 @@ def optimize(
     next_states_t = tensor_from_numpy(next_states, torch.float32)
     dones_t = tensor_from_numpy(dones, torch.float32)
 
+    # giải thích: Tính toán giá trị Q hiện tại dự đoán bởi mạng chính policy network
     q_values = policy(states_t).gather(1, actions_t.unsqueeze(1)).squeeze(1)
     with torch.no_grad():
         next_valid_t = None
@@ -220,6 +234,7 @@ def optimize(
             invalid_rows = ~next_valid_t.any(dim=1)
             if invalid_rows.any():
                 next_valid_t[invalid_rows, int(Action.STOP)] = True
+        # giải thích: Tính toán Q-target sử dụng cấu hình Double DQN hoặc DQN thông thường
         if double_dqn:
             next_policy_q = policy(next_states_t)
             if next_valid_t is not None:
@@ -235,6 +250,7 @@ def optimize(
 
     td_errors = q_values - target_q
 
+    # giải thích: Tính toán hàm mất mát Huber/Smooth L1, áp dụng weights của PER nếu có, và cập nhật độ ưu tiên
     if use_per:
         element_loss = F.smooth_l1_loss(q_values, target_q, reduction="none")
         loss = (weights_t * element_loss).mean()
@@ -242,6 +258,7 @@ def optimize(
     else:
         loss = F.smooth_l1_loss(q_values, target_q)
 
+    # giải thích: Thực hiện lan truyền ngược (backprop) và cập nhật trọng số
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
     torch.nn.utils.clip_grad_norm_(policy.parameters(), 10.0)
@@ -249,6 +266,7 @@ def optimize(
     return float(loss.item())
 
 
+# giải thích: Hàm chạy thử nghiệm một tập bằng chính sách tham lam (greedy policy) để đánh giá Recall
 def _greedy_eval_episode(
     policy: QNetwork,
     det,
@@ -314,6 +332,7 @@ def _greedy_eval_episode(
     return int(previous_covered.sum()), int(len(previous_covered)), accepted_slices
 
 
+# giải thích: Hàm chạy đánh giá chính sách định kỳ trên nhiều tập dữ liệu Validation
 def evaluate_policy(
     policy: QNetwork,
     dataset: CachedEpisodeDataset,
@@ -355,6 +374,7 @@ def evaluate_policy(
     }
 
 
+# giải thích: Tính toán điểm số benchmark đánh giá chính sách dựa trên các hệ số mAP50, small_recall, crop cost và FP cost
 def benchmark_score(metrics: dict[str, float], cfg: TrainConfig, env_cfg: EnvConfig) -> float:
     crop_cost = float(cfg.eval_slice_cost_weight) * metrics["crops_per_image"] / max(float(env_cfg.max_slices), 1.0)
     fp_cost = float(cfg.eval_fp_cost_weight) * metrics["fp_per_image"]
@@ -366,6 +386,7 @@ def benchmark_score(metrics: dict[str, float], cfg: TrainConfig, env_cfg: EnvCon
     )
 
 
+# giải thích: Tạo bộ đánh giá chất lượng phát hiện trên vùng cắt lát (CropOutcomeEvaluator)
 def make_crop_outcome_evaluator(
     model,
     image_root: Path,
@@ -403,6 +424,7 @@ def make_crop_outcome_evaluator(
     )
 
 
+# giải thích: Thực hiện đánh giá chất lượng phát hiện của YOLO trên vùng cắt lát để xác định phần thưởng cuối cho tập huấn luyện
 def apply_terminal_crop_outcome(
     evaluator: CropOutcomeEvaluator | None,
     image_path: Path | str,
@@ -435,6 +457,7 @@ def apply_terminal_crop_outcome(
     return outcome
 
 
+# giải thích: Hàm huấn luyện DQN đơn luồng truyền thống qua các tập dữ liệu giả lập
 def train_dqn(
     image_root: Path,
     cache_root: Path,
@@ -454,10 +477,12 @@ def train_dqn(
     bench_cfg: BenchmarkConfig | None = None,
     eval_use_cache: bool = True,
 ) -> Path:
+    # giải thích: Khởi tạo seed để đảm bảo tính tái lặp
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
 
+    # giải thích: Tải tập dữ liệu huấn luyện và kiểm định
     dataset = CachedEpisodeDataset(
         image_root=image_root,
         cache_root=cache_root,
@@ -482,6 +507,7 @@ def train_dqn(
     inference_model = None
     benchmark_model = None
     benchmark_images: list[Path] = []
+    # giải thích: Nạp mô hình YOLO phục vụ đánh giá hoặc làm hàm tính phần thưởng vùng cắt lát
     if cfg.eval_benchmark_images > 0:
         if eval_weights is None or label_root is None or infer_cfg is None or bench_cfg is None:
             raise RuntimeError("Benchmark validation requires weights, labels, inference config, and benchmark config")
@@ -507,6 +533,7 @@ def train_dqn(
         eval_use_cache=eval_use_cache,
     )
 
+    # giải thích: Trích xuất không gian trạng thái ban đầu của môi trường
     probe_det = dataset.first_detection()
     probe_env = SliceEnv(
         probe_det,
@@ -521,6 +548,7 @@ def train_dqn(
     if layout.state_dim != state_dim:
         raise ValueError(f"State layout mismatch: layout has {layout.state_dim}, env produced {state_dim}")
 
+    # giải thích: Khởi tạo QNetwork chính và target network
     device = configure_torch_runtime(device_name)
     policy = QNetwork(
         state_dim,
@@ -540,8 +568,9 @@ def train_dqn(
     optimizer = torch.optim.AdamW(policy.parameters(), lr=cfg.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.episodes, eta_min=1e-6)
 
+    # giải thích: Khởi tạo bộ đệm replay buffer (thông thường hoặc PER)
     if cfg.use_per:
-        replay: ReplayBuffer | PrioritizedReplayBuffer = PrioritizedReplayBuffer(
+        replay = PrioritizedReplayBuffer(
             capacity=cfg.replay_size,
             alpha=cfg.per_alpha,
             beta_start=cfg.per_beta_start,
@@ -566,6 +595,10 @@ def train_dqn(
     best_reward = -float("inf")
     global_step = 0
     optimizer_steps = 0
+    # giải thích: Clamp eval_interval để run ngắn vẫn eval đủ dày (>=20 lần), tránh best.pt kẹt ở ep 1
+    eval_interval_eff = max(1, min(int(cfg.eval_interval), max(1, int(cfg.episodes) // 20)))
+
+    # giải thích: Vòng lặp huấn luyện DQN qua từng episode
     with log_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
@@ -601,12 +634,14 @@ def train_dqn(
         writer.writeheader()
         for episode in range(1, cfg.episodes + 1):
             det, hard = dataset.random_episode()
-            previous_rois: list[np.ndarray] = []
-            attempted_rois: list[np.ndarray] = []
+            previous_rois = []
+            attempted_rois = []
             previous_covered = np.zeros((len(as_boxes(hard.hard_boxes)),), dtype=bool)
-            slice_boxes_all: list[np.ndarray] = []
-            slice_scores_all: list[np.ndarray] = []
-            slice_classes_all: list[np.ndarray] = []
+            slice_boxes_all = []
+            slice_scores_all = []
+            slice_classes_all = []
+            
+            # giải thích: Lấy các dự đoán ban đầu của YOLO trên toàn bộ ảnh
             if crop_evaluator is not None:
                 full_boxes, full_scores, full_classes = crop_evaluator.full_predictions(det)
                 accepted_new_count = crop_evaluator.initial_new_count(
@@ -630,14 +665,16 @@ def train_dqn(
             crop_tp_gain_total = 0
             crop_fp_gain_total = 0
             crop_outcome_reward_total = 0.0
-            losses: list[float] = []
+            losses = []
             info = {"covered": 0, "hard_total": len(previous_covered)}
 
+            # giải thích: Tính toán số lát cắt tối đa dựa trên curriculum learning
             current_max_slices = env_cfg.max_slices
             if cfg.use_curriculum:
                 curriculum_frac = min(float(global_step) / max(cfg.curriculum_steps, 1), 1.0)
                 current_max_slices = max(1, int(env_cfg.max_slices * curriculum_frac))
 
+            # giải thích: Thử nghiệm tạo các lát cắt cho tới khi đạt giới hạn số lần thử (max_attempts)
             max_attempts = _max_slice_attempts(env_cfg, infer_cfg, current_max_slices)
             for _attempt_idx in range(max_attempts):
                 if accepted_slices >= current_max_slices:
@@ -655,13 +692,16 @@ def train_dqn(
                 )
                 state = env.reset()
 
-                n_step_buffer: list[tuple[np.ndarray, Action, float, np.ndarray, bool, np.ndarray]] = []
-                terminal_outcome: CropOutcome | None = None
+                n_step_buffer = []
+                terminal_outcome = None
+                
+                # giải thích: Thực thi bước hành động của agent trên môi trường cho đến khi dừng hoặc hết số bước tối đa
                 for _ in range(env_cfg.max_steps + 1):
                     epsilon = epsilon_by_step(global_step, cfg)
                     guide_prob = guide_prob_by_step(global_step, cfg)
                     action = select_action(policy, state, epsilon, guide_prob, env, device)
                     result = env.step(action)
+                    # giải thích: Khi lát cắt dừng, tính toán phần thưởng bổ sung từ kết quả phát hiện của YOLO
                     if result.done:
                         terminal_outcome = apply_terminal_crop_outcome(
                             crop_evaluator,
@@ -692,6 +732,7 @@ def train_dqn(
                             crop_outcome_reward_total += float(terminal_outcome.reward)
                     next_valid_actions = env.valid_actions().copy()
 
+                    # giải thích: Lưu các bước chuyển đổi trạng thái vào n-step buffer để tính Q-learning n-step
                     n_step_buffer.append((state, action, result.reward, result.state, result.done, next_valid_actions))
                     if len(n_step_buffer) >= cfg.n_step:
                         ret = 0.0
@@ -708,6 +749,7 @@ def train_dqn(
                     info = result.info
                     global_step += 1
 
+                    # giải thích: Định kỳ chạy bước tối ưu hóa trọng số mô hình Q (Backprop)
                     optimize_every = max(int(cfg.optimize_every), 1)
                     if len(replay) >= cfg.min_replay and global_step % optimize_every == 0:
                         loss = optimize(
@@ -724,6 +766,7 @@ def train_dqn(
                         if loss is not None:
                             optimizer_steps += 1
                             losses.append(loss)
+                            # giải thích: Cập nhật target network (soft updatePoly hoặc hard update)
                             if cfg.use_soft_update:
                                 soft_update(policy, target_net, cfg.tau)
                     if not cfg.use_soft_update and global_step % cfg.target_update == 0:
@@ -742,6 +785,7 @@ def train_dqn(
                             n_step_buffer.pop(0)
                         break
 
+                # giải thích: Hợp nhất lát cắt mới hoặc loại bỏ lát cắt nếu nó bị trùng lặp hoặc không đạt chuẩn chất lượng
                 new_hits = int((env.covered & ~previous_covered).sum())
                 repeat_overlap = _attempt_overlap(env.roi, attempted_rois)
                 attempted_rois.append(env.roi.copy())
@@ -805,8 +849,9 @@ def train_dqn(
                 "val_benchmark_score": "",
             }
 
-            selected_score: float | None = None
-            if episode == 1 or episode % max(int(cfg.eval_interval), 1) == 0:
+            # giải thích: Đánh giá mô hình định kỳ và lưu lại checkpoint tốt nhất
+            selected_score = None
+            if episode == 1 or episode % eval_interval_eff == 0 or episode == cfg.episodes:
                 if val_dataset is not None:
                     metrics = evaluate_policy(
                         policy,
@@ -891,6 +936,7 @@ def train_dqn(
                     f"covered={row['covered']}/{row['hard_total']}{val_msg}"
                 )
 
+    # giải thích: Lưu checkpoint của lượt cuối cùng trước khi kết thúc
     save_checkpoint(
         last_path,
         policy,

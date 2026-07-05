@@ -2,14 +2,16 @@ infer:
   full_imgsz: 640
   slice_imgsz: 640
   full_conf: 0.01
-  output_conf: 0.25
+  output_conf: 0.10        # ★ Mặc định CÂN BẰNG (từ loop qua đêm: recall 0.354 > topk, fp ~50).
+                           #   Dùng 0.05 (configs/rc_005.yaml) cho RECALL TỐI ĐA (recall 0.428, fp ~84).
+                           #   Đòn bẩy recall chính; conf càng thấp recall càng cao, FP càng nhiều.
   iou: 0.7
   merge_iou: 0.5
   max_det: 3000
   min_slice_detections: 1
-  min_slice_utility: 0.5
+  min_slice_utility: 0.2   # [WAS: 0.5] chấp nhận lát cắt có ít phát hiện mới -> nhiều crop hơn
   duplicate_iou: 0.5
-  max_slice_attempts: 16
+  max_slice_attempts: 24   # [WAS: 16] thử nhiều hơn để đạt đủ 14 lát cắt được chấp nhận
   require_stop_for_acceptance: true
   target_classes:
     - 0
@@ -28,3 +30,8 @@ benchmark:
   fixed_slice_fraction: 0.35
   fixed_overlap: 0.2
   small_area_percentile: 40
+  # Baseline heuristic top-K (không RL): cắt K slice quanh K đỉnh objectness heatmap.
+  # Đặt topk_slices xấp xỉ crops/image trung bình của RL-SAHI để so cùng ngân sách crop.
+  topk_slices: 14          # [WAS: 6] khớp ngân sách crop mới của RL để so công bằng
+  topk_slice_fraction: 0.35
+  topk_min_separation: 2

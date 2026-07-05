@@ -1,0 +1,4 @@
+includes:
+  - ft_grid960.yaml
+infer:
+  output_conf: 0.05

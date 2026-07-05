@@ -1,0 +1,9 @@
+# S1-crop-XL: crop-outcome, thêm data (1500 train) + 1500 ep — push cuối.
+includes:
+  - local.yaml
+paths:
+  dqn_out_dir: runs/sweep/s1cropxl/dqn
+  checkpoint: runs/sweep/s1cropxl/dqn/best.pt
+train:
+  use_crop_outcome_reward: true
+  episodes: 1500

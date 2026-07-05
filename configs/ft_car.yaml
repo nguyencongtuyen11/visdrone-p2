@@ -1,0 +1,5 @@
+# CAR-ONLY: chỉ đánh giá class 3 (car) — trả lời "chỉ dùng ô tô cho đỡ nhiễu?"
+includes:
+  - ft.yaml
+infer:
+  target_classes: [3]

@@ -1,0 +1,5 @@
+# Fine-tune + output_conf=0.25 (quét để xem RL-SAHI có cải thiện mAP nhờ ít FP). Chỉ include ft.yaml.
+includes:
+  - ft.yaml
+infer:
+  output_conf: 0.25

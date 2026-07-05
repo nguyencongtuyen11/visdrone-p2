@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# giải thích: Tệp trung gian xuất (export) các thành phần cốt lõi liên quan đến DQN (QNetwork, ReplayBuffer, TrainConfig, các hàm huấn luyện/tối ưu)
 from rl_sahi.rl.checkpoint import load_policy, save_checkpoint
 from rl_sahi.rl.network import QNetwork
 from rl_sahi.rl.replay import ReplayBuffer

@@ -1,0 +1,5 @@
+# VEHICLES-ONLY: car/van/truck/bus — scope "phương tiện" (kiểu UAVDT)
+includes:
+  - ft.yaml
+infer:
+  target_classes: [3, 4, 5, 8]

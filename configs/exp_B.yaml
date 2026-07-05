@@ -1,0 +1,9 @@
+includes:
+  - exp_common.yaml
+paths:
+  dqn_out_dir: runs/exp/B/dqn
+  checkpoint: runs/exp/B/dqn/best.pt
+env:
+  use_simplified_reward: false
+train:
+  use_crop_outcome_reward: true

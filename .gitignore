@@ -1,15 +1,24 @@
 __pycache__/
 *.py[cod]
 
-# Dataset artifacts
+# Dataset artifacts (KHONG commit - tai lai bang: python scripts/download_visdrone.py)
 data/cache/
 data/processed/
 data/raw/images/
 data/
 
+# Run outputs (~661M - KHONG commit; keo best.pt ve thu cong)
+runs/
+
+# Auto-generated abs-path data yaml (machine-specific, train_p2.py tao lai)
+configs/*.autogen.yaml
+
+# Weights: chi commit 2 file can cho warm-start tren cloud
 *.pt
 !yolo11s.pt
+!best_visdrone.pt
 
+# Figures / local artifacts
 *.jpg
 .agents/
 .vscode/

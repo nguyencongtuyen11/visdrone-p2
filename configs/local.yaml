@@ -1,0 +1,33 @@
+# ============================================================================
+# LOCAL.YAML — cấu hình chạy NHANH trên máy yếu (GTX 1650 4GB).
+# Train RL chỉ trên cache hard-region (KHÔNG gọi YOLO trong vòng lặp); YOLO chỉ
+# chạy lúc cache (detect.py) và benchmark cuối. Tối ưu tốc độ để lặp nhiều cấu hình.
+# Kế thừa env/reward recall-max từ rl.yaml (reward_clip=100...).
+# ============================================================================
+includes:
+  - default.yaml
+
+env:
+  max_steps: 10            # [rl.yaml WAS 20] rút ngắn rollout/lát cắt -> nhanh hơn nhiều
+
+infer:
+  max_slice_attempts: 14   # [inference.yaml WAS 24] ít lần thử/episode khi train -> nhanh
+
+train:
+  use_crop_outcome_reward: false   # không gọi YOLO trong training -> nhẹ GPU
+  eval_benchmark_images: 0         # eval bằng hard-region val-recall (nhanh)
+  optimize_every: 8                # ★ [WAS 1] giảm 8x số lần optimize -> tăng tốc lớn
+  num_envs: 6
+  batch_size: 256
+  min_replay: 512
+  replay_size: 30000
+  episodes: 120
+  eval_interval: 50
+  eval_episodes: 12
+  eval_slice_cost_weight: 0.0
+  resume: false
+  log_interval: 10
+  epsilon_decay_steps: 1500
+  guide_decay_steps: 1500
+  curriculum_steps: 1500
+  per_beta_frames: 20000

@@ -1,0 +1,11 @@
+# Lưới 0.5-frac @ slice_imgsz 960: zoom hiệu dụng >= SAHI-0.35@640 trên MỌI cỡ ảnh test
+# (1360x765: 2.51x vs 2.39x | 960x540: 3.55x vs 3.39x | 1920x1080: 1.78x vs 1.69x)
+# nhưng chỉ ~8-12 crop thay vì 28. Công thức từ design-panel sau khi verifier đo cỡ ảnh thật.
+includes:
+  - ft.yaml
+infer:
+  slice_imgsz: 960
+benchmark:
+  fixed_slice_fraction: 0.5
+  topk_slices: 6
+  topk_slice_fraction: 0.22

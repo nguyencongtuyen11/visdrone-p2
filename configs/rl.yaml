@@ -1,3 +1,10 @@
+# ============================================================================
+# RL.YAML — TINH CHỈNH THEO HƯỚNG RECALL-MAX (Round 1)
+# Mục tiêu: YOLO đóng băng bắt vật to; RL đưa ROI vào vật nhỏ để bắt được càng
+# nhiều càng tốt. Chấp nhận nhiều crop + nhiều FP hơn để đổi lấy recall.
+# Bản gốc lưu ở rl.yaml.bak. Mỗi dòng đổi có comment [WAS: giá trị cũ].
+# ============================================================================
+
 state:
   grid_size: 16
   low_conf_threshold: 0.5
@@ -12,7 +19,7 @@ state:
 
 env:
   max_steps: 20
-  max_slices: 8
+  max_slices: 14            # [WAS: 8] cho phép nhiều lát cắt hơn để phủ nhiều vật nhỏ
   initial_slice_fraction: 0.28
   move_fraction: 0.30
   zoom_factor: 0.75
@@ -28,17 +35,17 @@ env:
   high_conf_threshold: 0.5
   old_slice_overlap_threshold: 0.5
   min_new_hits_to_accept: 1
-  use_gpu_box_ops: true
+  use_gpu_box_ops: false
   gpu_box_device: "cuda"
   use_simplified_reward: true
-  target_reward: 0.75
-  efficiency_weight: 0.5
-  constraint_weight: 3.0
+  target_reward: 1.0         # [WAS: 0.75] thưởng phủ hard-region mới mạnh hơn
+  efficiency_weight: 0.15    # [WAS: 0.5] giảm áp lực "dừng sớm / cắt ít"
+  constraint_weight: 3.0     # giữ: buộc ROI hợp lệ + nhỏ (zoom đúng vật nhỏ)
   stop_bonus_weight: 0.5
-  step_penalty: 0.03
+  step_penalty: 0.01         # [WAS: 0.03] bước đi rẻ hơn -> dám khám phá lâu hơn
   empty_slice_penalty: 0.5
-  area_penalty: 0.35
-  detected_overlap_penalty: 1.0
+  area_penalty: 0.2          # [WAS: 0.35] bớt phạt ROI to
+  detected_overlap_penalty: 0.5   # [WAS: 1.0] bớt phạt phủ lại vùng đã có detection
   attempted_overlap_penalty: 2.0
   new_hard_reward: 0.5
   hard_density_reward: 0.2
@@ -74,22 +81,24 @@ train:
   use_spatial_cnn: true
   double_dqn: true
   dueling: true
-  reward_clip: 10.0
+  reward_clip: 100.0         # ★ [WAS: 10.0] LỖI CŨ: clip 10 làm mọi lát cắt tốt
+                             # (hard_hit 4.0 x nhiều hits) đều bị cắt về 10 -> agent
+                             # không phân biệt phủ 3 vs 40 vật -> học "cắt ít".
   optimize_every: 1
   preload_cache: true
   seed: 42
   log_interval: 25
   val_split: val
-  eval_interval: 500
+  eval_interval: 500         # [WAS: 1000] cập nhật best.pt dày hơn (bắt đỉnh recall)
   eval_episodes: 128
-  eval_slice_cost_weight: 0.05
-  eval_benchmark_images: 500
-  eval_map_weight: 1.0
-  eval_small_recall_weight: 1.5
-  eval_fp_cost_weight: 0.01
+  eval_slice_cost_weight: 0.0    # [WAS: 0.05] KHÔNG phạt số crop khi chọn best.pt
+  eval_benchmark_images: 100
+  eval_map_weight: 0.5           # [WAS: 1.0] hạ trọng số mAP
+  eval_small_recall_weight: 4.0  # ★ [WAS: 1.5] chọn best.pt CHỦ YẾU theo small-recall
+  eval_fp_cost_weight: 0.0       # [WAS: 0.01] KHÔNG phạt FP khi chọn best.pt
   device: "cuda"
   resume: true
-  resume_interval: 25
+  resume_interval: 100
   use_soft_update: true
   tau: 0.005
   use_per: true
@@ -99,12 +108,12 @@ train:
   use_curriculum: true
   curriculum_steps: 15000
   use_crop_outcome_reward: true
-  crop_detection_reward: 0.5
+  crop_detection_reward: 0.75    # [WAS: 0.5] thưởng phát hiện mới nhiều hơn
   crop_tp_reward: 3.0
-  crop_fp_penalty: 1.5
+  crop_fp_penalty: 0.75          # [WAS: 1.5] chấp nhận FP để đổi recall
   crop_empty_penalty: 1.2
   crop_no_gain_penalty: 1.2
-  hard_hit_reward: 4.0
+  hard_hit_reward: 4.0           # giữ (giờ không còn bị clip 10 nuốt mất)
   crop_outcome_reward_scale: 0.1
-  accepted_no_hard_penalty: 2.0
+  accepted_no_hard_penalty: 1.0  # [WAS: 2.0] bớt phạt crop có detection nhưng không trúng "hard"
   rejected_crop_penalty: 0.5

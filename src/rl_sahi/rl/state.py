@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# giải thích: Tệp trung gian xuất (export) các hằng số, cấu trúc dữ liệu cấu hình và hàm liên quan đến không gian trạng thái (State)
 from rl_sahi.rl.state_config import BASE_MAP_CHANNELS, DETECTION_MAP_CHANNELS, SUMMARY_DIM, StateConfig, StateLayout
 from rl_sahi.rl.state_layout import make_state_layout, state_layout_from_detection
 from rl_sahi.rl.state_maps import build_detection_map, mark_history, proposal_mask, proposal_quality

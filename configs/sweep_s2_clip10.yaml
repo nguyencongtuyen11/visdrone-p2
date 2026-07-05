@@ -1,0 +1,8 @@
+# S2: giống S1 nhưng reward_clip=10 (lỗi cũ) -> kỳ vọng recall thấp hơn / cắt ít hơn
+includes:
+  - local.yaml
+paths:
+  dqn_out_dir: runs/sweep/s2/dqn
+  checkpoint: runs/sweep/s2/dqn/best.pt
+train:
+  reward_clip: 10.0

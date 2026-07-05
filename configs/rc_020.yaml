@@ -1,0 +1,6 @@
+# Quét output_conf=0.20 để test recall KHÔNG train lại (dùng trên best.pt sẵn có).
+# Chạy: python scripts/benchmark.py --config configs/rc_020.yaml #         --split test --limit 100 --checkpoint <đường_dẫn>/best.pt #         --out-dir runs/benchmark/rc_020
+includes:
+  - default.yaml
+infer:
+  output_conf: 0.20

@@ -1,0 +1,17 @@
+includes:
+  - default.yaml
+paths:
+  image_root: D:/datasets/VisDrone/images
+  label_root: D:/datasets/VisDrone/labels
+  cache_root: D:/datasets/VisDrone/cache
+train:
+  episodes: 300
+  eval_interval: 150
+  eval_episodes: 30
+  eval_benchmark_images: 0
+  epsilon_decay_steps: 1000
+  guide_decay_steps: 1000
+  use_curriculum: false
+  resume: false
+  num_envs: 8
+  log_interval: 50

@@ -1,0 +1,5 @@
+# Fine-tune + output_conf=0.05 (trần recall cho mọi method)
+includes:
+  - ft.yaml
+infer:
+  output_conf: 0.05

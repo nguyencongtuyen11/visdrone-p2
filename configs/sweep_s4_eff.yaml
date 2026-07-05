@@ -1,0 +1,10 @@
+# S4: kiểu "tiết kiệm" cũ (efficiency_weight/step/area cao) -> đối chứng
+includes:
+  - local.yaml
+paths:
+  dqn_out_dir: runs/sweep/s4/dqn
+  checkpoint: runs/sweep/s4/dqn/best.pt
+env:
+  efficiency_weight: 0.5
+  step_penalty: 0.03
+  area_penalty: 0.35

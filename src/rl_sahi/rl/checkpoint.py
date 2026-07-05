@@ -13,6 +13,7 @@ from rl_sahi.rl.network import QNetwork
 from rl_sahi.rl.state_config import StateConfig, StateLayout
 
 
+# giải thích: Hàm lưu trữ checkpoint của mô hình DQN cùng với tất cả các siêu tham số cấu hình liên quan
 def save_checkpoint(
     path: Path,
     policy: QNetwork,
@@ -23,6 +24,7 @@ def save_checkpoint(
     layout: StateLayout | None = None,
     detection_metadata: dict[str, Any] | None = None,
 ) -> None:
+    # giải thích: Lưu các tham số mô hình, kích thước vector trạng thái, loại mạng, cấu hình huấn luyện và môi trường
     torch.save(
         {
             "model": policy.state_dict(),
@@ -40,12 +42,15 @@ def save_checkpoint(
     )
 
 
+# giải thích: Hàm nạp lại mô hình chính sách (policy) và cấu hình từ tệp checkpoint
 def load_policy(checkpoint_path: Path, device: DeviceLike = None) -> tuple[QNetwork, dict]:
     device = resolve_torch_device(device)
     try:
         checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
     except (TypeError, Exception):
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        
+    # giải thích: Lọc và nạp các cấu hình môi trường và trạng thái hợp lệ từ checkpoint
     env_allowed = {field.name for field in fields(EnvConfig)}
     state_allowed = {field.name for field in fields(StateConfig)}
     env_cfg = EnvConfig(**{key: value for key, value in checkpoint.get("env_cfg", {}).items() if key in env_allowed})
@@ -56,11 +61,15 @@ def load_policy(checkpoint_path: Path, device: DeviceLike = None) -> tuple[QNetw
     use_spatial_cnn = checkpoint.get("network_type") == "spatial_cnn"
     dueling = checkpoint.get("dueling", checkpoint.get("train_cfg", {}).get("dueling", False))
     checkpoint_actions = checkpoint.get("actions")
+    
+    # giải thích: Kiểm tra không gian hành động của checkpoint có khớp với mã nguồn hiện tại không
     if isinstance(checkpoint_actions, dict) and len(checkpoint_actions) != NUM_ACTIONS:
         raise ValueError(
             f"Checkpoint was trained with {len(checkpoint_actions)} actions, but current code expects {NUM_ACTIONS}. "
             "Retrain the DQN with the current action space."
         )
+        
+    # giải thích: Khởi tạo kiến trúc mạng Q và nạp bộ trọng số (weights)
     policy = QNetwork(
         int(checkpoint["state_dim"]),
         hidden_dim=hidden_dim,

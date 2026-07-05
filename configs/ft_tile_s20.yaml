@@ -1,0 +1,9 @@
+# Tiling budget lớn: cho tới 20 lát + nới ngưỡng chấp nhận (inference-only, không train lại agent).
+includes:
+  - ft.yaml
+env:
+  max_steps: 10
+  max_slices: 20
+infer:
+  max_slice_attempts: 32
+  min_slice_utility: 0.05

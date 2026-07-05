@@ -1,0 +1,6 @@
+# S1: recall-max (reward_clip=100, max_slices=14, efficiency_weight=0.15) — cấu hình chính
+includes:
+  - local.yaml
+paths:
+  dqn_out_dir: runs/sweep/s1/dqn
+  checkpoint: runs/sweep/s1/dqn/best.pt

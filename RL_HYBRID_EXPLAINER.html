@@ -1,0 +1,869 @@
+<title>RL-HYBRID — minh họa trực quan</title>
+<style>
+  :root{
+    --bg:#0F1317; --panel:#171D24; --panel2:#1D242C; --line:#2A333D;
+    --ink:#E9EEF3; --mut:#93A1AE; --dim:#5B6873;
+    --t1:#5B9BD5; --t2:#E8B33C; --t3:#3DDC8E; --sahi:#E86A5A;
+    --mono:"Cascadia Code","Cascadia Mono",Consolas,ui-monospace,monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+       margin:0;padding:40px 20px 80px;line-height:1.6}
+  .wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:72px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
+  h1{font-size:clamp(28px,4.5vw,42px);line-height:1.15;margin:10px 0 0;text-wrap:balance;font-weight:700}
+  h2{font-size:22px;margin:8px 0 0;text-wrap:balance;font-weight:650}
+  h3{font-size:15.5px;margin:0;font-weight:650}
+  p{margin:0;max-width:68ch}
+  .lead{color:var(--mut);font-size:16.5px;margin-top:14px}
+  .accent{color:var(--t3)}
+  section{display:flex;flex-direction:column;gap:18px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
+
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+  .tier{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;
+        border-top:3px solid var(--c)}
+  .tier .tt{font-weight:650;font-size:14.5px;display:flex;align-items:center;gap:8px}
+  .tier .tt::before{content:"";width:10px;height:10px;border:2px solid var(--c);display:inline-block}
+  .tier p{font-size:13px;color:var(--mut);margin-top:6px}
+
+  .stage{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  canvas{display:block;width:100%;height:auto}
+  .steps{display:flex;flex-wrap:wrap;gap:8px}
+  .steps button, .padbtn, .miscbtn{
+    font-family:var(--sans);font-size:13.5px;font-weight:600;color:var(--mut);
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:9px 14px;cursor:pointer;transition:color .15s,border-color .15s}
+  .steps button:hover,.padbtn:hover,.miscbtn:hover{color:var(--ink)}
+  .steps button:focus-visible,.padbtn:focus-visible,.miscbtn:focus-visible,input:focus-visible{outline:2px solid var(--t3);outline-offset:2px}
+  .steps button[aria-pressed="true"]{color:var(--ink);border-color:var(--t3);background:var(--panel2)}
+  .steps .num{font-family:var(--mono);font-size:11px;color:var(--dim);margin-right:7px}
+  .steps button[aria-pressed="true"] .num{color:var(--t3)}
+  .hud{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+        padding:8px 14px;font-size:13px;color:var(--mut)}
+  .chip b{font-family:var(--mono);font-size:15px;color:var(--ink);font-weight:600}
+  .chip.good b{color:var(--t3)}
+  .cap{min-height:52px;font-size:15px;color:var(--ink);background:var(--panel);
+       border-left:3px solid var(--t3);border-radius:0 8px 8px 0;padding:12px 16px;max-width:none}
+
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .duo figure{margin:0;display:flex;flex-direction:column;gap:10px}
+  .duo figcaption{font-size:13.5px;color:var(--mut)}
+  .duo figcaption b{color:var(--ink)}
+  .statline{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px}
+  .statline span{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 9px;color:var(--mut)}
+  .statline .win{color:var(--t3);border-color:rgba(61,220,142,.4)}
+  .statline .lose{color:var(--sahi)}
+
+  /* pipeline flows */
+  .flowduo{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  .flow{display:flex;flex-direction:column;gap:0;background:var(--panel);border:1px solid var(--line);
+        border-radius:10px;padding:18px;border-top:3px solid var(--fc)}
+  .flow h3{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .flow h3 small{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .fstep{position:relative;padding:11px 12px 11px 40px;background:var(--panel2);
+         border:1px solid var(--line);border-radius:8px;font-size:13.5px;color:var(--ink)}
+  .fstep + .fstep{margin-top:22px}
+  .fstep + .fstep::before{content:"↓";position:absolute;top:-21px;left:14px;color:var(--dim);font-size:14px}
+  .fstep .n{position:absolute;left:12px;top:11px;font-family:var(--mono);font-size:12px;color:var(--fc);font-weight:700}
+  .fstep small{display:block;color:var(--mut);font-size:12.5px;margin-top:2px}
+  .fstep .cost{float:right;font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:8px}
+  .fstep.loop{border-left:3px solid var(--t3)}
+  .fsum{margin-top:14px;font-family:var(--mono);font-size:12.5px;color:var(--fc);text-align:right}
+
+  /* state maps */
+  .mapsgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+  .mapcell{display:flex;flex-direction:column;gap:6px;align-items:center}
+  .mapcell canvas{width:96px;height:96px;border:1px solid var(--line);border-radius:6px;image-rendering:pixelated}
+  .mapcell span{font-size:11.5px;color:var(--mut);text-align:center;line-height:1.35}
+  .stateblocks{display:grid;grid-template-columns:1fr;gap:12px}
+  .sb{border-left:3px solid var(--c);background:var(--panel);border-radius:0 10px 10px 0;
+      border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+      padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+  .sb h3 b{font-family:var(--mono);font-size:12px;color:var(--c);font-weight:600;margin-right:8px}
+  .sb p{font-size:13.5px;color:var(--mut);max-width:none}
+  .sb p b{color:var(--ink)}
+
+  /* action pad + playground */
+  .padwrap{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start}
+  .pad{display:grid;grid-template-columns:repeat(3,54px);grid-auto-rows:54px;gap:7px}
+  .padbtn{font-size:19px;padding:0;display:flex;align-items:center;justify-content:center}
+  .padbtn.stop{color:var(--t3);border-color:rgba(61,220,142,.5);font-size:12.5px;font-weight:700}
+  .zoomrow{display:flex;gap:7px;margin-top:7px}
+  .zoomrow .padbtn{flex:1;font-size:13px}
+  .padnote{font-size:12.5px;color:var(--dim);margin-top:10px;max-width:22ch}
+  .pghud{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .verdict{min-height:46px;font-size:14.5px;padding:10px 14px;border-radius:8px;background:var(--panel2);
+           border:1px solid var(--line);color:var(--mut)}
+  .verdict.ok{color:var(--t3);border-color:rgba(61,220,142,.45)}
+  .verdict.bad{color:var(--sahi);border-color:rgba(232,106,90,.45)}
+
+  /* reward tables + calculator */
+  .rtable{width:100%;border-collapse:collapse;font-size:13.5px}
+  .rtable td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:top}
+  .rtable td:first-child{font-family:var(--mono);font-size:13px;white-space:nowrap;width:110px}
+  .rtable .plus{color:var(--t3)} .rtable .minus{color:var(--sahi)}
+  .rtable td:last-child{color:var(--mut)}
+  .rtable td:last-child b{color:var(--ink)}
+  .calc{display:flex;flex-direction:column;gap:14px}
+  .calc .row{display:flex;gap:14px;flex-wrap:wrap;align-items:end}
+  .calc label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--mut)}
+  .calc input[type=number]{width:110px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+        font-family:var(--mono);font-size:16px;border-radius:8px;padding:9px 12px}
+  .calcout{font-family:var(--mono);font-size:14px;background:var(--panel2);border:1px solid var(--line);
+           border-radius:8px;padding:14px 16px;line-height:1.9;overflow-x:auto}
+  .calcout .ok{color:var(--t3)} .calcout .bad{color:var(--sahi)}
+
+  /* compare methods table */
+  .cmp{width:100%;border-collapse:collapse;font-size:13.5px}
+  .cmp th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);
+          text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .cmp td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--mut)}
+  .cmp td b{color:var(--ink)} .cmp td:first-child{white-space:nowrap;font-weight:650;color:var(--ink)}
+  .cmp .num{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  .cmp tr.hl td{background:rgba(61,220,142,.05)}
+  .cmp tr.hl td:first-child{color:var(--t3)}
+  .tablewrap{overflow-x:auto}
+
+  .bars{display:flex;flex-direction:column;gap:20px}
+  .brow{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center}
+  .blabel{font-size:13.5px;color:var(--mut)}
+  .blabel small{display:block;font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.06em}
+  .bpair{display:flex;flex-direction:column;gap:6px}
+  .bar{height:22px;border-radius:4px;display:flex;align-items:center;gap:10px;min-width:0}
+  .bar i{height:100%;border-radius:4px;flex:none;transition:width .6s ease}
+  .bar.us i{background:linear-gradient(90deg,#2AA873,var(--t3))}
+  .bar.them i{background:linear-gradient(90deg,#B04A3D,var(--sahi))}
+  .bar em{font-style:normal;font-family:var(--mono);font-size:13px;white-space:nowrap}
+  .bar.us em{color:var(--t3)} .bar.them em{color:var(--sahi)}
+  .bar .who{font-size:11px;color:var(--dim);font-family:var(--mono);white-space:nowrap}
+
+  .note{font-size:13px;color:var(--dim)}
+  .final{border:1px solid rgba(61,220,142,.35);background:linear-gradient(180deg,rgba(61,220,142,.06),transparent);
+         border-radius:10px;padding:22px 24px}
+  .final p{font-size:17px;max-width:none}
+  @media (max-width:720px){
+    .tiers,.duo,.flowduo{grid-template-columns:1fr}
+    .brow{grid-template-columns:1fr}
+    .padwrap{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion: reduce){ .bar i{transition:none} }
+</style>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header>
+    <div class="eyebrow">Đồ án RL-SAHI · phương pháp đề xuất</div>
+    <h1>RL-HYBRID: lưới thô lo <span style="color:var(--t2)">phủ kín</span>,
+        RL lo <span class="accent">zoom đúng chỗ</span></h1>
+    <p class="lead">Vấn đề của ảnh drone: đưa ảnh 2000px vào YOLO là bị nén còn 640px —
+      một người đi bộ chỉ còn ~4 pixel, gần như tàng hình. Giải pháp là cắt ảnh thành mảnh để phóng to.
+      Câu hỏi duy nhất: <b style="color:var(--ink)">cắt ở đâu?</b></p>
+    <div class="tiers">
+      <div class="tier" style="--c:var(--t1)">
+        <div class="tt">Tầng 1 · Full-image ×1</div>
+        <p>Chạy YOLO một lần trên toàn ảnh. Bắt vật TO (xe buýt, xe tải). Chi phí: 1 lượt.</p>
+      </div>
+      <div class="tier" style="--c:var(--t2)">
+        <div class="tt">Tầng 2 · Lưới thô ~8 ô</div>
+        <p>Ô lớn phủ kín 100% ảnh, phóng to ~2×. Vớt vật CỠ VỪA ở mọi nơi — không thủng chỗ nào.</p>
+      </div>
+      <div class="tier" style="--c:var(--t3)">
+        <div class="tt">Tầng 3 · RL chọn ≤8 ô nhỏ</div>
+        <p>Agent DQN đọc bản đồ objectness, zoom sâu 4× vào đúng cụm vật nhỏ, từ chối cắt chỗ trống.</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- INTERACTIVE DEMO -->
+  <section>
+    <div class="eyebrow">Mô phỏng · bấm từng bước</div>
+    <h2>Xem phương pháp chạy trên một cảnh drone</h2>
+    <div class="steps" id="steps" role="group" aria-label="Các bước mô phỏng">
+      <button data-s="0" aria-pressed="true"><span class="num">0</span>Vấn đề</button>
+      <button data-s="1" aria-pressed="false"><span class="num">1</span>Full-image</button>
+      <button data-s="2" aria-pressed="false"><span class="num">2</span>Lưới thô</button>
+      <button data-s="3" aria-pressed="false"><span class="num">3</span>RL zoom</button>
+      <button data-s="4" aria-pressed="false"><span class="num">4</span>Kết quả</button>
+    </div>
+    <div class="stage"><canvas id="cv" width="960" height="540" aria-label="Mô phỏng cảnh drone và các tầng cắt"></canvas></div>
+    <div class="hud">
+      <div class="chip">Crop đã dùng <b id="hCrops">0</b></div>
+      <div class="chip good">Vật bắt được <b id="hCaught">0 / 149</b></div>
+      <div class="chip">Chấm xám = vật nhỏ chưa phát hiện · chấm <span style="color:var(--t3)">xanh</span> = đã bắt được</div>
+    </div>
+    <div class="cap" id="cap"></div>
+  </section>
+
+  <!-- PIPELINE STEP BY STEP -->
+  <section>
+    <div class="eyebrow">Sử dụng như thế nào · pipeline từng bước</div>
+    <h2>Từ một tấm ảnh đến kết quả — SAHI làm gì, mình làm gì</h2>
+    <p style="color:var(--mut)">Bạn mô tả SAHI rất đúng: <i>"YOLO phát hiện vật to → SAHI cắt → YOLO trên từng ảnh cắt → gộp"</i>.
+       RL-HYBRID giữ nguyên khung xương đó, chỉ thay <b style="color:var(--ink)">bước cắt mù</b> bằng hai tầng cắt có tính toán:</p>
+    <div class="flowduo">
+      <div class="flow" style="--fc:var(--sahi)">
+        <h3>SAHI thường <small>pipeline cũ</small></h3>
+        <div class="fstep"><span class="n">1</span><span class="cost">1 lượt YOLO</span>
+          YOLO trên toàn ảnh (nén về 640px)<small>bắt được vật to, sót gần hết vật nhỏ</small></div>
+        <div class="fstep"><span class="n">2</span><span class="cost">0 lượt</span>
+          Cắt lưới đều <b>28 ô</b> — cỡ 35% ảnh, chồng mép 20%<small>KHÔNG nhìn nội dung: trời, tán cây, sân trống đều bị cắt như nhau</small></div>
+        <div class="fstep"><span class="n">3</span><span class="cost">28 lượt YOLO</span>
+          Chạy YOLO trên TỪNG ô<small>mỗi ô được phóng to ~2.4–3.4× → thấy được vật nhỏ trong ô</small></div>
+        <div class="fstep"><span class="n">4</span><span class="cost">CPU</span>
+          Gộp tất cả box bằng NMS (IoU 0.5, theo từng class)<small>xóa box trùng giữa các ô chồng mép</small></div>
+        <div class="fsum">tổng: 29 lượt YOLO / ảnh · recall 0.603 · FP 192</div>
+      </div>
+      <div class="flow" style="--fc:var(--t3)">
+        <h3>RL-HYBRID <small>pipeline mới</small></h3>
+        <div class="fstep"><span class="n">1</span><span class="cost">1 lượt YOLO</span>
+          YOLO trên toàn ảnh — <b>giữ lại thêm</b> bản đồ objectness 16×16 + feature<small>vừa bắt vật to, vừa lấy "bản đồ nghi vấn" cho agent dùng ở bước 3</small></div>
+        <div class="fstep"><span class="n">2</span><span class="cost">~8 lượt YOLO</span>
+          Cắt lưới THÔ ~8 ô (cỡ 60% cạnh ảnh, chồng mép 15%) → YOLO từng ô<small>phủ kín 100% ảnh với zoom nhẹ ~2× — bảo hiểm không thủng vùng nào</small></div>
+        <div class="fstep loop"><span class="n">3</span><span class="cost">~6 lượt YOLO</span>
+          VÒNG RL — lặp tối đa 14 lần, dừng khi đủ 8 crop được nhận:<small>
+          a. dựng state từ bản đồ objectness + lịch sử ô đã cắt<br>
+          b. agent lái ROI: dịch / zoom ≤ 10 bước → STOP<br>
+          c. YOLO trên crop vừa chọn (zoom sâu 3–5×)<br>
+          d. kiểm định: có ≥ 1 detection MỚI (chưa trùng cái đã có) và utility ≥ 0.2 → <b style="color:var(--t3)">NHẬN</b>, không thì <b style="color:var(--sahi)">LOẠI</b> (không tính crop… nhưng agent bị trừ điểm lúc train)</small></div>
+        <div class="fstep"><span class="n">4</span><span class="cost">CPU</span>
+          Gộp cả 3 tầng bằng đúng NMS đó (IoU 0.5, theo class)<small>so sánh hoàn toàn công bằng với SAHI — chỉ khác chỗ CẮT Ở ĐÂU</small></div>
+        <div class="fsum">tổng: ~15 lượt YOLO / ảnh · recall 0.676 · FP 181</div>
+      </div>
+    </div>
+    <p class="note">Điểm mấu chốt: cả hai pipeline dùng CÙNG một con YOLO, cùng ngưỡng conf 0.10, cùng NMS.
+       Khác biệt duy nhất là chiến lược chọn vùng cắt — nên chênh lệch kết quả quy được hoàn toàn cho phương pháp.</p>
+  </section>
+
+  <!-- SAHI COMPARE -->
+  <section>
+    <div class="eyebrow">Đối chứng</div>
+    <h2>SAHI thường làm gì với cùng cảnh này?</h2>
+    <p style="color:var(--mut)">SAHI không nhìn nội dung ảnh — nó cắt một lưới đều <b style="color:var(--ink)">28 ô giống hệt nhau</b>,
+       kể cả lên trời, tán cây và sân trống. Ô tô đỏ đậm bên dưới là những ô cắt vào chỗ <i>không có gì</i>.</p>
+    <div class="duo">
+      <figure>
+        <div class="stage"><canvas id="cvSahi" width="960" height="540" aria-label="Lưới SAHI 28 ô đều"></canvas></div>
+        <figcaption><b style="color:var(--sahi)">SAHI thường</b> — cắt mù theo lưới</figcaption>
+        <div class="statline">
+          <span class="lose">28 crop/ảnh</span><span>recall 0.603</span><span class="lose">FP 192/ảnh</span>
+        </div>
+      </figure>
+      <figure>
+        <div class="stage"><canvas id="cvHyb" width="960" height="540" aria-label="RL-HYBRID 13 ô có chủ đích"></canvas></div>
+        <figcaption><b class="accent">RL-HYBRID</b> — phủ kín + zoom có chủ đích</figcaption>
+        <div class="statline">
+          <span class="win">14.7 crop/ảnh</span><span class="win">recall 0.676</span><span class="win">FP 181/ảnh</span>
+        </div>
+      </figure>
+    </div>
+    <p class="note">Hai điểm yếu của lưới mù: (1) tốn crop cho vùng trống; (2) ranh giới ô chặt đôi vật to nằm vắt qua — sinh box lỗi.
+       Còn adaptive thuần (không có tầng lưới thô) lại <b style="color:var(--ink)">thủng coverage</b>: chỗ agent không nhìn tới là mất — recall kẹt ở ~0.50. Hybrid vá cả hai.</p>
+  </section>
+
+  <!-- STATE -->
+  <section>
+    <div class="eyebrow">Bên trong tầng 3 · phần 1/3</div>
+    <h2>STATE — agent "nhìn thấy" gì trước khi quyết định?</h2>
+    <p style="color:var(--mut)">Agent không nhìn ảnh gốc (quá nặng). Nó nhìn một bản tóm tắt gồm 3 khối,
+       tất cả lấy <b style="color:var(--ink)">miễn phí từ lượt YOLO full-image ở bước 1</b> — không tốn thêm inference nào:</p>
+    <div class="stateblocks">
+      <div class="sb" style="--c:var(--t1)">
+        <h3><b>KHỐI A</b>Vector đặc trưng toàn ảnh</h3>
+        <p>Feature từ layer 16 của YOLO, chuẩn hóa L2. Cho agent biết <b>"đây là loại cảnh gì"</b> —
+           quảng trường đông người khác xa lộ vắng — để chỉnh chiến lược cắt nhiều hay ít.</p>
+      </div>
+      <div class="sb" style="--c:var(--t2)">
+        <h3><b>KHỐI B</b>13 bản đồ lưới 16×16 — mắt không gian của agent</h3>
+        <p>Mỗi bản đồ là một lớp thông tin phủ lên ảnh, chia 16×16 ô. Sáu bản đồ quan trọng nhất:</p>
+        <div class="mapsgrid">
+          <div class="mapcell"><canvas id="m1" width="96" height="96"></canvas><span><b style="color:#F08C3C">objectness</b><br>YOLO "ngờ ngợ có vật" ở đâu</span></div>
+          <div class="mapcell"><canvas id="m2" width="96" height="96"></canvas><span><b style="color:#F08C3C">proposal</b><br>detection mờ conf 0.01–0.5 (nghi vấn)</span></div>
+          <div class="mapcell"><canvas id="m3" width="96" height="96"></canvas><span><b style="color:#F08C3C">mật độ</b><br>chỗ nào detection chen chúc</span></div>
+          <div class="mapcell"><canvas id="m4" width="96" height="96"></canvas><span><b style="color:#5B9BD5">high-conf</b><br>vật ĐÃ bắt chắc (khỏi cắt lại)</span></div>
+          <div class="mapcell"><canvas id="m5" width="96" height="96"></canvas><span><b style="color:#93A1AE">lịch sử</b><br>các ô ĐÃ cắt rồi (đừng lặp)</span></div>
+          <div class="mapcell"><canvas id="m6" width="96" height="96"></canvas><span><b style="color:#3DDC8E">ROI hiện tại</b><br>khung của mình đang ở đâu</span></div>
+        </div>
+        <p class="note">Còn lại: 4 kênh feature không gian + bản đồ ô-được-nhận + bản đồ vật nhỏ. 13 kênh này đi qua một CNN nhỏ.</p>
+      </div>
+      <div class="sb" style="--c:var(--t3)">
+        <h3><b>KHỐI C</b>Vector tóm tắt 28 con số</h3>
+        <p>Những thứ bản đồ khó diễn tả: <b>tổng số detection · điểm tin cậy trung bình · tâm/cỡ ROI ·
+           đang ở bước thứ mấy / 10 · độ đè lên ô cũ · mức zoom hiện tại</b>… Đi thẳng vào MLP.</p>
+      </div>
+    </div>
+    <p class="note">Ba khối ghép thành một vector vài nghìn chiều → mạng Dueling DQN (CNN đọc bản đồ + MLP đọc phần còn lại)
+       → xuất ra 11 giá trị Q, mỗi giá trị = "hành động này hứa hẹn bao nhiêu điểm".</p>
+  </section>
+
+  <!-- ACTION + PLAYGROUND -->
+  <section>
+    <div class="eyebrow">Bên trong tầng 3 · phần 2/3</div>
+    <h2>ACTION — 11 nút điều khiển. Thử tự lái xem!</h2>
+    <p style="color:var(--mut)">Mỗi bước, agent chọn đúng 1 trong 11 hành động cho khung ROI của nó.
+       Bên dưới là sân chơi: <b style="color:var(--ink)">bạn đóng vai agent</b> — lái khung trắng đến chỗ đông chấm rồi bấm STOP.
+       Hệ thống sẽ chấm điểm crop của bạn y như chấm agent lúc train.</p>
+    <div class="padwrap">
+      <div>
+        <div class="pad" role="group" aria-label="Bàn phím hành động">
+          <button class="padbtn" data-a="ul" aria-label="chéo trên trái">↖</button>
+          <button class="padbtn" data-a="u"  aria-label="lên">↑</button>
+          <button class="padbtn" data-a="ur" aria-label="chéo trên phải">↗</button>
+          <button class="padbtn" data-a="l"  aria-label="trái">←</button>
+          <button class="padbtn stop" data-a="stop">STOP</button>
+          <button class="padbtn" data-a="r"  aria-label="phải">→</button>
+          <button class="padbtn" data-a="dl" aria-label="chéo dưới trái">↙</button>
+          <button class="padbtn" data-a="d"  aria-label="xuống">↓</button>
+          <button class="padbtn" data-a="dr" aria-label="chéo dưới phải">↘</button>
+        </div>
+        <div class="zoomrow">
+          <button class="padbtn" data-a="zi">Zoom in ×0.75</button>
+          <button class="padbtn" data-a="zo">Zoom out</button>
+        </div>
+        <div class="zoomrow">
+          <button class="miscbtn" id="pgReset" style="flex:1">↺ Chơi lại</button>
+        </div>
+        <p class="padnote">bước dịch = 30% cạnh ROI · zoom mỗi lần ×0.75 · cỡ ROI bị kẹp trong 10–35% cạnh ảnh · tối đa 10 bước thì buộc phải STOP</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="stage"><canvas id="cvPg" width="960" height="460" aria-label="Sân chơi tự lái ROI"></canvas></div>
+        <div class="pghud">
+          <div class="chip">Bước <b id="pgSteps">0 / 10</b></div>
+          <div class="chip">Crop đã nhận <b id="pgCrops">0 / 8</b></div>
+          <div class="chip good">Tổng vật vớt được <b id="pgScore">0</b></div>
+        </div>
+        <div class="verdict" id="pgVerdict">Lái khung trắng vào cụm chấm xám rồi bấm STOP. Mẹo: zoom in trước khi STOP — crop càng gọn, mỗi vật càng to, YOLO càng dễ bắt.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REWARD -->
+  <section>
+    <div class="eyebrow">Bên trong tầng 3 · phần 3/3</div>
+    <h2>REWARD — thưởng phạt tính thế nào? (số thật từ config)</h2>
+    <div class="duo">
+      <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+        <h3>Ⓐ Trong lúc di chuyển — "tiền xăng" mỗi bước</h3>
+        <table class="rtable">
+          <tr><td class="plus">+1.0</td><td>× mỗi <b>hard-region mới</b> phủ được khi STOP (hard-region = vật nhỏ mà YOLO full-image đã BỎ SÓT — tính sẵn từ nhãn lúc train)</td></tr>
+          <tr><td class="minus">−0.15</td><td>× chi phí mỗi bước (tăng theo diện tích ROI) — <b>đi lòng vòng là lỗ</b></td></tr>
+          <tr><td class="minus">−3.0</td><td>× vi phạm ràng buộc: ROI to quá 12% ảnh · zoom nông · đè ≥50% lên ô đã cắt</td></tr>
+          <tr><td class="minus">−0.5</td><td>× mức đè lên vật to đã bắt chắc rồi (đừng tốn crop cho thứ đã có)</td></tr>
+          <tr><td class="plus">±0.5</td><td>bonus STOP đúng chỗ có mục tiêu / phạt STOP vu vơ</td></tr>
+        </table>
+        <p class="note">Vai trò: định hình HÀNH VI — đi thẳng, gọn, không lặp. Đây là phần thưởng "dày" giúp học nhanh.</p>
+      </div>
+      <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+        <h3>Ⓑ Khi STOP — chấm điểm bằng YOLO THẬT (crop-outcome)</h3>
+        <table class="rtable">
+          <tr><td class="plus">+3.0</td><td>× mỗi detection <b>ĐÚNG mới</b> (khớp nhãn, chưa ai bắt trước đó)</td></tr>
+          <tr><td class="minus">−0.75</td><td>× mỗi <b>false positive mới</b> sinh ra từ crop này</td></tr>
+          <tr><td class="plus">+0.75</td><td>× utility = tổng điểm tin cậy của các detection mới</td></tr>
+          <tr><td class="minus">−1.2</td><td>crop RỖNG (không ra detection nào)</td></tr>
+          <tr><td class="minus">−1.2</td><td>crop có detection nhưng toàn thứ ĐÃ CÓ (không gì mới)</td></tr>
+          <tr><td class="plus">+4.0</td><td>× mỗi hard-region trúng — cú "ăn đậm" khi cứu được vật bị sót</td></tr>
+        </table>
+        <p class="note">Vai trò: neo vào MỤC TIÊU CUỐI. Chạy YOLO thật trên crop rồi so nhãn — agent không thể "lách luật" vì điểm số chính là chất lượng detection thật. Đây chính là lý do bản crop-outcome thắng bản chỉ dùng Ⓐ (recall 0.428 vs 0.377 thời frozen).</p>
+      </div>
+    </div>
+    <div class="panel calc">
+      <h3>🧮 Máy tính reward — tự thử</h3>
+      <div class="row">
+        <label>Detection ĐÚNG mới (TP)<input type="number" id="cTP" value="12" min="0" max="99"></label>
+        <label>False positive mới (FP)<input type="number" id="cFP" value="3" min="0" max="99"></label>
+        <label>Trong đó hard-region<input type="number" id="cHR" value="5" min="0" max="99"></label>
+      </div>
+      <div class="calcout" id="cOut"></div>
+      <p class="note">Utility ước lượng = 0.45 × (TP + FP) (tổng điểm tin cậy của detection mới).
+         Ngưỡng NHẬN crop lúc suy luận: ≥ 1 detection mới và utility ≥ 0.2. Điểm crop-outcome nhân hệ số 0.1 khi cộng vào Q-learning để cân với phần Ⓐ.</p>
+    </div>
+  </section>
+
+  <!-- RL AGENT ANIM -->
+  <section>
+    <div class="eyebrow">Ghép lại</div>
+    <h2>Một lượt hoàn chỉnh của agent</h2>
+    <div class="duo">
+      <figure>
+        <div class="stage"><canvas id="cvRl" width="960" height="500" aria-label="Hoạt ảnh agent điều hướng ROI theo bản đồ nhiệt"></canvas></div>
+        <figcaption>Khung trắng = ROI của agent, di chuyển / thu nhỏ từng bước rồi <b class="accent">STOP</b> tại cụm nóng nhất</figcaption>
+      </figure>
+      <figure class="panel" style="justify-content:center;gap:14px">
+        <p style="font-size:14.5px">1 · Đọc <b style="color:var(--ink)">state</b>: bản đồ objectness chỉ 3 cụm nghi vấn, lịch sử báo chưa cắt chỗ nào.</p>
+        <p style="font-size:14.5px">2 · Q-network chấm điểm 11 <b style="color:var(--ink)">action</b> → "sang phải" có Q cao nhất → đi.</p>
+        <p style="font-size:14.5px">3 · Lặp: tiến về cụm nóng, <b style="color:var(--ink)">zoom in ×0.75</b> hai lần cho gọn.</p>
+        <p style="font-size:14.5px">4 · <b class="accent">STOP</b> → YOLO chạy thật trên crop → 32 detection đúng mới → <b class="accent">reward dương lớn</b>, crop được NHẬN.</p>
+        <p class="note">Lúc train, chuỗi (state, action, reward) này được nhét vào replay buffer để cập nhật Q-network (Double DQN + PER + n-step 3, γ=0.95). Lúc suy luận, chỉ việc chạy policy — không cần nhãn.</p>
+      </figure>
+    </div>
+  </section>
+
+  <!-- METHOD COMPARISON -->
+  <section>
+    <div class="eyebrow">Phân biệt cho rõ</div>
+    <h2>Khác "di chuyển thuần" và "tile coding" chỗ nào?</h2>
+    <p style="color:var(--mut)">Chữ "tiling" từng gây lẫn vì có 2 nghĩa. <b style="color:var(--ink)">Image tiling</b> = cắt ảnh thành ô
+       (chính là tầng 2!). <b style="color:var(--ink)">Tile coding</b> (gợi ý của thầy) = cách MÃ HÓA STATE trong RL cổ điển.
+       Phương án chốt thực chất là <b class="accent">ghép cả hai hướng đã bàn</b>: lưới (tiling) + agent di chuyển (movement RL).</p>
+    <div class="tablewrap">
+    <table class="cmp">
+      <tr><th>Phương án</th><th>Bản chất</th><th>Điểm yếu chí mạng</th><th>Kết quả (test-150)</th></tr>
+      <tr>
+        <td>Di chuyển thuần<br><small style="color:var(--dim)">(RL-SAHI gốc)</small></td>
+        <td>Agent tự lái ROI đi khắp ảnh, cắt đến đâu hay đến đó. <b>Không có gì đảm bảo phủ hết ảnh.</b></td>
+        <td>Thủng coverage — chỗ agent không ghé là mất trắng. Recall kẹt ~0.505 dù tăng số crop.</td>
+        <td class="num">recall .505 · 11.6 crop</td>
+      </tr>
+      <tr>
+        <td>Tile coding<br><small style="color:var(--dim)">(gợi ý của thầy)</small></td>
+        <td>VẪN là bài toán di chuyển — chỉ đổi bộ não: state nén còn 7 con số, mã hóa bằng lưới ô chồng lệch, Q tuyến tính, chạy CPU.</td>
+        <td>Cùng bệnh thủng coverage; state nghèo hơn nên kém bền khi đổi ngưỡng conf. Giữ làm ablation: "không cần deep net vẫn ~ngang".</td>
+        <td class="num">recall .505 · 11.5 crop</td>
+      </tr>
+      <tr>
+        <td style="color:var(--sahi)">SAHI thường<br><small style="color:var(--dim)">(baseline)</small></td>
+        <td>Image tiling MÙ: lưới đều 28 ô, không nhìn nội dung.</td>
+        <td>Lãng phí crop ở vùng trống, chặt đôi vật to ở mép ô, FP cao, mAP không nhích.</td>
+        <td class="num">recall .603 · 28 crop · FP 192</td>
+      </tr>
+      <tr class="hl">
+        <td>RL-HYBRID<br><small style="color:var(--dim)">(chốt)</small></td>
+        <td><b>Lưới thô (tiling thưa, có chủ đích) + agent di chuyển (RL) làm mũi khoan.</b> Mỗi hướng vá đúng điểm yếu của hướng kia.</td>
+        <td>Chi phí mỗi crop RL cao hơn crop lưới (phải chạy policy) — bù lại tổng crop chỉ một nửa.</td>
+        <td class="num" style="color:var(--t3)">recall .676 · 14.7 crop · FP 181</td>
+      </tr>
+    </table>
+    </div>
+    <p class="note">Đọc bảng theo hàng dọc cuối: di chuyển thuần và tile coding cùng kẹt 0.505 → vấn đề KHÔNG nằm ở bộ não
+       (deep hay tuyến tính) mà ở <b style="color:var(--ink)">thiếu coverage</b>. Thêm lưới thô là recall bung lên 0.676 — chẩn đoán đúng bệnh quan trọng hơn thuốc mạnh.</p>
+  </section>
+
+  <!-- RESULTS -->
+  <section>
+    <div class="eyebrow">Số liệu thật · VisDrone test-150 (held-out) · đã tái xác minh 2 lần</div>
+    <h2>Kết quả: thắng SAHI cả 4 tiêu chí</h2>
+    <div class="panel bars" id="bars">
+      <div class="brow">
+        <div class="blabel">Recall vật nhỏ <small>CAO HƠN = TỐT</small></div>
+        <div class="bpair">
+          <div class="bar us"><i data-w="96.6"></i><em>0.676</em><span class="who">RL-HYBRID</span></div>
+          <div class="bar them"><i data-w="86.1"></i><em>0.603</em><span class="who">SAHI</span></div>
+        </div>
+      </div>
+      <div class="brow">
+        <div class="blabel">mAP@0.5 <small>CAO HƠN = TỐT</small></div>
+        <div class="bpair">
+          <div class="bar us"><i data-w="94"></i><em>0.376</em><span class="who">RL-HYBRID</span></div>
+          <div class="bar them"><i data-w="79"></i><em>0.316</em><span class="who">SAHI</span></div>
+        </div>
+      </div>
+      <div class="brow">
+        <div class="blabel">False positive / ảnh <small>THẤP HƠN = TỐT</small></div>
+        <div class="bpair">
+          <div class="bar us"><i data-w="66"></i><em>181</em><span class="who">RL-HYBRID</span></div>
+          <div class="bar them"><i data-w="70"></i><em>192</em><span class="who">SAHI</span></div>
+        </div>
+      </div>
+      <div class="brow">
+        <div class="blabel">Số crop / ảnh <small>THẤP HƠN = TỐT</small></div>
+        <div class="bpair">
+          <div class="bar us"><i data-w="49"></i><em>14.7</em><span class="who">RL-HYBRID</span></div>
+          <div class="bar them"><i data-w="93"></i><em>28</em><span class="who">SAHI</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Trên tập validation, xu hướng giữ nguyên: mAP 0.415 vs 0.364 · recall 0.676 vs 0.578 · cùng FP · nửa số crop.
+       Vai trò của RL được kiểm chứng riêng: thay RL bằng heuristic top-k thì recall tụt 0.676 → 0.669 và tốn thêm crop (16 vs 14.7).</p>
+  </section>
+
+  <!-- FINAL -->
+  <div class="final">
+    <div class="eyebrow" style="color:var(--t3)">Một câu chốt</div>
+    <p style="margin-top:8px"><b>Lưới thô đảm bảo không bỏ sót chỗ nào — RL đảm bảo công sức zoom dồn đúng chỗ.</b>
+       Kết quả: bắt nhiều vật nhỏ hơn SAHI, chính xác hơn SAHI, mà chỉ tốn một nửa số lần cắt.</p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var MONO = getComputedStyle(document.body).getPropertyValue("--mono");
+  var SANS = getComputedStyle(document.body).getPropertyValue("--sans");
+  var W=960,H=540;
+
+  /* ---------- deterministic scene ---------- */
+  function lcg(seed){var s=seed>>>0;return function(){s=(s*1664525+1013904223)>>>0;return s/4294967296}}
+  var clusters=[ {x:190,y:330,r:80,n:44},{x:470,y:350,r:95,n:58},{x:680,y:185,r:60,n:33} ];
+  var dots=[], rnd=lcg(42);
+  clusters.forEach(function(c,ci){
+    for(var i=0;i<c.n;i++){
+      var a=rnd()*6.283, rr=Math.sqrt(rnd())*c.r;
+      dots.push({x:c.x+Math.cos(a)*rr, y:c.y+Math.sin(a)*rr*0.72, cl:ci, tier:3});
+    }
+  });
+  for(var i=0;i<14;i++){ dots.push({x:60+rnd()*840, y:80+rnd()*400, cl:-1, tier:2}); }
+  dots.forEach(function(d){ if(d.cl>=0 && rnd()<0.30) d.tier=2; });
+  var cars=[[120,470],[240,452],[350,430],[455,408],[560,386],[665,364],[770,342],[860,325]]
+      .map(function(p,i){return {x:p[0],y:p[1],w:22,h:13,tier:i<3?1:2}});
+  var bigs=[ {x:60,y:96,w:56,h:22}, {x:800,y:452,w:64,h:24} ];
+  var TOTAL = dots.length + cars.length + bigs.length;
+
+  var coarse=[], side=312, stride=265;
+  for(var gy=0; gy<2; gy++) for(var gx=0; gx<4; gx++)
+    coarse.push({x:Math.min(gx*stride, W-side), y:Math.min(gy*stride, H-side), s:side});
+  var fine = clusters.map(function(c){return {x:c.x-78,y:c.y-64,w:156,h:128}});
+  fine.push({x:470-78, y:350-64+70, w:156, h:128});
+  var rejected={x:800,y:60,w:150,h:120};
+
+  function drawScene(g,w,h){
+    w=w||W; h=h||H;
+    g.fillStyle="#181F26"; g.fillRect(0,0,w,h);
+    g.save(); g.beginPath();
+    g.moveTo(40,h); g.lineTo(w,h*0.537); g.lineTo(w,h*0.726); g.lineTo(160,h); g.closePath();
+    g.fillStyle="#222B33"; g.fill(); g.restore();
+    g.fillStyle="#1C242C"; g.beginPath(); g.ellipse(w*0.448,h*0.556,330,190,0,0,6.283); g.fill();
+    g.fillStyle="#1A2620";
+    [[820,120,46],[880,180,38],[770,70,30],[905,90,34]].forEach(function(t){
+      g.beginPath(); g.arc(t[0],t[1],t[2],0,6.283); g.fill();
+    });
+  }
+  function drawObjects(g, upto){
+    var GREEN="#3DDC8E", GREY="#55616D";
+    bigs.forEach(function(b){
+      g.fillStyle = upto>=1 ? "rgba(61,220,142,.25)" : "#333E48";
+      g.fillRect(b.x,b.y,b.w,b.h);
+      g.strokeStyle = upto>=1 ? "#5B9BD5" : "#404C57"; g.lineWidth=2;
+      g.strokeRect(b.x,b.y,b.w,b.h);
+    });
+    cars.forEach(function(c){
+      var got = upto>=c.tier;
+      g.fillStyle = got ? "rgba(61,220,142,.30)" : "#39434D";
+      g.fillRect(c.x,c.y,c.w,c.h);
+      g.strokeStyle = got ? (c.tier===1?"#5B9BD5":"#E8B33C") : "#454F5A"; g.lineWidth=1.6;
+      g.strokeRect(c.x,c.y,c.w,c.h);
+    });
+    dots.forEach(function(d){
+      var got = upto>=d.tier;
+      g.fillStyle = got ? GREEN : GREY;
+      g.beginPath(); g.arc(d.x,d.y, got?2.6:2.2, 0, 6.283); g.fill();
+    });
+  }
+  function box(g,x,y,w,h,color,lw,dash,fill){
+    g.save();
+    if(fill){ g.fillStyle=fill; g.fillRect(x,y,w,h); }
+    if(color){ g.strokeStyle=color; g.lineWidth=lw||2; if(dash) g.setLineDash(dash); g.strokeRect(x,y,w,h); }
+    g.restore();
+  }
+  function tag(g,x,y,text,color){
+    g.save();
+    g.font="600 12px "+SANS;
+    var w=g.measureText(text).width+12;
+    g.fillStyle="rgba(15,19,23,.88)"; g.fillRect(x,y-16,w,18);
+    g.fillStyle=color; g.fillText(text,x+6,y-3); g.restore();
+  }
+
+  var caught1 = bigs.length + cars.filter(function(c){return c.tier===1}).length;
+  var caught2 = caught1 + cars.filter(function(c){return c.tier===2}).length
+              + dots.filter(function(d){return d.tier===2}).length;
+  var caught3 = caught2 + dots.filter(function(d){return d.tier===3}).length;
+  var STEP = {
+    0:{crops:0, caught:0,
+       cap:"❶ Vấn đề — mỗi chấm xám là một người/xe máy chỉ vài pixel. YOLO nhìn cả ảnh nén nhỏ sẽ bỏ sót gần hết. Bấm bước tiếp ▸"},
+    1:{crops:1, caught:caught1,
+       cap:"❷ Tầng 1 · Full-image ×1 (khung xanh dương): bắt được vật TO như xe tải, xe buýt — nhưng đám đông vẫn xám nguyên."},
+    2:{crops:9, caught:caught2,
+       cap:"❸ Tầng 2 · Lưới thô 8 ô (vàng) phủ kín 100% ảnh, zoom ~2×: vớt vật cỡ vừa ở MỌI nơi — bảo hiểm không thủng vùng nào. Đây là thứ adaptive thuần thiếu."},
+    3:{crops:13, caught:caught3,
+       cap:"❹ Tầng 3 · RL agent đặt 4 ô nhỏ (xanh lá) zoom 4× vào đúng 3 cụm đông — và TỪ CHỐI ô trên tán cây (gạch chéo ✗). Đám đông sáng xanh."},
+    4:{crops:13, caught:caught3,
+       cap:"❺ Kết quả — 13 crop bắt "+caught3+"/"+TOTAL+" vật. SAHI cần 28 crop mù mới đạt tương đương, kèm nhiều FP hơn."}
+  };
+
+  var cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+  var hCrops=document.getElementById("hCrops"), hCaught=document.getElementById("hCaught"),
+      cap=document.getElementById("cap");
+
+  function render(step){
+    drawScene(ctx);
+    if(step>=2) coarse.forEach(function(c){ box(ctx,c.x,c.y,c.s,c.s,null,0,null,"rgba(232,179,60,.05)"); });
+    if(step>=3) fine.forEach(function(f){ box(ctx,f.x,f.y,f.w,f.h,null,0,null,"rgba(61,220,142,.07)"); });
+    drawObjects(ctx, step);
+    ctx.font="11px "+MONO; ctx.fillStyle="#39444E"; ctx.fillText("cảnh drone mô phỏng · "+TOTAL+" vật", 14, H-12);
+    if(step>=1){ box(ctx,4,4,W-8,H-8,"#5B9BD5",2.5); tag(ctx,10,26,"Tầng 1 · full-image ×1","#5B9BD5"); }
+    if(step>=2){
+      coarse.forEach(function(c){ box(ctx,c.x,c.y,c.s,c.s,"rgba(232,179,60,.75)",1.6); });
+      tag(ctx,10,54,"Tầng 2 · lưới thô 8 ô · zoom ~2×","#E8B33C");
+    }
+    if(step>=3){
+      fine.forEach(function(f){ box(ctx,f.x,f.y,f.w,f.h,"#3DDC8E",2.5); });
+      tag(ctx,10,82,"Tầng 3 · RL chọn 4 ô · zoom ~4×","#3DDC8E");
+      box(ctx,rejected.x,rejected.y,rejected.w,rejected.h,"#5B6873",1.6,[6,5]);
+      ctx.save(); ctx.strokeStyle="#5B6873"; ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.moveTo(rejected.x+8,rejected.y+8);
+      ctx.lineTo(rejected.x+rejected.w-8,rejected.y+rejected.h-8); ctx.stroke(); ctx.restore();
+      tag(ctx,rejected.x,rejected.y+rejected.h+20,"RL từ chối: không có vật ✗","#93A1AE");
+    }
+    if(step>=4){
+      ctx.save();
+      ctx.font="700 20px "+SANS;
+      ctx.fillStyle="rgba(15,19,23,.9)"; ctx.fillRect(W/2-215,H/2-26,430,48);
+      ctx.strokeStyle="#3DDC8E"; ctx.strokeRect(W/2-215,H/2-26,430,48);
+      ctx.fillStyle="#3DDC8E"; ctx.textAlign="center";
+      ctx.fillText("13 crop · "+caught3+"/"+TOTAL+" vật — vs SAHI: 28 crop", W/2, H/2+6);
+      ctx.restore();
+    }
+    var s=STEP[step];
+    hCrops.textContent=s.crops;
+    hCaught.textContent=s.caught+" / "+TOTAL;
+    cap.textContent=s.cap;
+  }
+  var btns=[].slice.call(document.querySelectorAll("#steps button"));
+  btns.forEach(function(b){
+    b.addEventListener("click",function(){
+      btns.forEach(function(x){x.setAttribute("aria-pressed","false")});
+      b.setAttribute("aria-pressed","true");
+      render(+b.dataset.s);
+    });
+  });
+  render(0);
+
+  /* ---------- SAHI vs HYBRID minimaps ---------- */
+  function rectHasContent(x,y,s){
+    var pad=6;
+    function inR(px,py){return px>x-pad&&px<x+s+pad&&py>y-pad&&py<y+s+pad}
+    if(clusters.some(function(c){return inR(c.x,c.y)||inR(c.x-c.r,c.y)||inR(c.x+c.r,c.y)})) return true;
+    if(cars.some(function(c){return inR(c.x,c.y)})) return true;
+    if(bigs.some(function(b){return inR(b.x,b.y)})) return true;
+    return false;
+  }
+  var g2=document.getElementById("cvSahi").getContext("2d");
+  drawScene(g2); drawObjects(g2,4);
+  var sSide=182, sStride=146, nEmpty=0, nTot=0;
+  for(var sy=0; sy*sStride+sSide<=H+sStride; sy++){
+    for(var sx=0; sx*sStride+sSide<=W+sStride; sx++){
+      var x=Math.min(sx*sStride,W-sSide), y=Math.min(sy*sStride,H-sSide);
+      if(y>H-sSide+1&&sy>0&&(sy*sStride)>H-sSide+sStride) continue;
+      nTot++;
+      var empty=!rectHasContent(x,y,sSide);
+      if(empty){nEmpty++; box(g2,x,y,sSide,sSide,"rgba(232,106,90,.95)",1.8,null,"rgba(232,106,90,.16)");}
+      else box(g2,x,y,sSide,sSide,"rgba(232,106,90,.5)",1.2);
+    }
+  }
+  tag(g2,10,26,"lưới đều "+nTot+" ô — "+nEmpty+" ô cắt vào chỗ trống (đỏ đậm)","#E86A5A");
+
+  var g3=document.getElementById("cvHyb").getContext("2d");
+  drawScene(g3);
+  coarse.forEach(function(c){ box(g3,c.x,c.y,c.s,c.s,null,0,null,"rgba(232,179,60,.05)"); });
+  drawObjects(g3,4);
+  box(g3,4,4,W-8,H-8,"#5B9BD5",2);
+  coarse.forEach(function(c){ box(g3,c.x,c.y,c.s,c.s,"rgba(232,179,60,.7)",1.4); });
+  fine.forEach(function(f){ box(g3,f.x,f.y,f.w,f.h,"#3DDC8E",2.2); });
+  tag(g3,10,26,"1 full + 8 thô + 4 RL = 13 ô, không ô nào vô ích","#3DDC8E");
+
+  /* ---------- STATE channel minis (16x16) ---------- */
+  function heatCell(gx,gy){ // objectness từ các cụm
+    var v=0;
+    clusters.forEach(function(c){
+      var dx=(gx+0.5)*60-c.x, dy=(gy+0.5)*33.75-c.y;
+      v=Math.max(v, Math.exp(-(dx*dx+dy*dy)/(2*c.r*c.r*0.8)));
+    });
+    return v;
+  }
+  function drawMini(id, fn, colorFn){
+    var c=document.getElementById(id); if(!c) return;
+    var g=c.getContext("2d"), cell=6;
+    g.fillStyle="#141A20"; g.fillRect(0,0,96,96);
+    for(var gy=0; gy<16; gy++) for(var gx=0; gx<16; gx++){
+      var v=fn(gx,gy);
+      if(v<=0.02) continue;
+      g.fillStyle=colorFn(v);
+      g.fillRect(gx*cell,gy*cell,cell-1,cell-1);
+    }
+  }
+  var orange=function(v){return "rgba(240,140,60,"+(0.15+0.75*v)+")"};
+  drawMini("m1", heatCell, orange);
+  var prnd=lcg(7);
+  var propCells={}; dots.forEach(function(d){ if(prnd()<0.5){ propCells[(Math.floor(d.x/60))+"_"+(Math.floor(d.y/33.75))]=1; } });
+  drawMini("m2", function(gx,gy){ return propCells[gx+"_"+gy]?0.7:0 }, orange);
+  var dens={}; dots.forEach(function(d){ var k=(Math.floor(d.x/60))+"_"+(Math.floor(d.y/33.75)); dens[k]=(dens[k]||0)+1 });
+  drawMini("m3", function(gx,gy){ return Math.min((dens[gx+"_"+gy]||0)/6,1) }, orange);
+  drawMini("m4", function(gx,gy){
+    var v=0;
+    bigs.concat(cars.slice(0,3)).forEach(function(b){
+      if(Math.abs((gx+0.5)*60-(b.x+b.w/2))<45 && Math.abs((gy+0.5)*33.75-(b.y+b.h/2))<30) v=1;
+    });
+    return v;
+  }, function(v){return "rgba(91,155,213,.85)"});
+  drawMini("m5", function(gx,gy){ return (gx>=2&&gx<=6&&gy>=8&&gy<=13)?0.8:0 }, function(v){return "rgba(147,161,174,.5)"});
+  drawMini("m6", function(gx,gy){ return (gx>=9&&gx<=11&&gy>=5&&gy<=7)?1:0 }, function(v){return "rgba(61,220,142,.85)"});
+
+  /* ---------- PLAYGROUND ---------- */
+  var PGW=960, PGH=460, pg=document.getElementById("cvPg"), gp=pg.getContext("2d");
+  var pgDots = dots.map(function(d){ return {x:d.x, y:d.y*(PGH/H), got:false} });
+  var MINSIDE=Math.min(PGW,PGH);
+  var roi, steps, cropsUsed, score, over;
+  var pgSteps=document.getElementById("pgSteps"), pgCrops=document.getElementById("pgCrops"),
+      pgScore=document.getElementById("pgScore"), pgVerdict=document.getElementById("pgVerdict");
+  function resetEp(full){
+    roi={x:PGW/2, y:PGH/2, s:0.28*MINSIDE};
+    steps=0;
+    if(full){ cropsUsed=0; score=0; over=false; pgDots.forEach(function(d){d.got=false});
+      setV("Lái khung trắng vào cụm chấm xám rồi bấm STOP. Mẹo: zoom in trước khi STOP — crop gọn thì vật to, YOLO dễ bắt.",""); }
+    drawPg();
+  }
+  function setV(t,cls){ pgVerdict.textContent=t; pgVerdict.className="verdict"+(cls?" "+cls:""); }
+  function drawPg(){
+    drawScene(gp,PGW,PGH);
+    gp.font="11px "+MONO; gp.fillStyle="#39444E"; gp.fillText("sân chơi — bạn là agent",14,PGH-12);
+    pgDots.forEach(function(d){
+      gp.fillStyle=d.got?"#3DDC8E":"#55616D";
+      gp.beginPath(); gp.arc(d.x,d.y,d.got?2.6:2.2,0,6.283); gp.fill();
+    });
+    var tooBig = roi.s > 0.35*MINSIDE+0.5;
+    gp.save();
+    gp.strokeStyle=tooBig?"#E86A5A":"#E9EEF3"; gp.lineWidth=2.4; gp.setLineDash([8,6]);
+    gp.strokeRect(roi.x-roi.s/2, roi.y-roi.s/2, roi.s, roi.s);
+    gp.setLineDash([]);
+    gp.font="600 12px "+SANS; gp.fillStyle=tooBig?"#E86A5A":"#E9EEF3";
+    gp.fillText(tooBig?"ROI to quá — vi phạm ràng buộc!":"ROI của bạn", roi.x-roi.s/2, roi.y-roi.s/2-8);
+    gp.restore();
+    pgSteps.textContent=steps+" / 10";
+    pgCrops.textContent=cropsUsed+" / 8";
+    pgScore.textContent=score;
+  }
+  function move(dx,dy){
+    var st=0.3*roi.s;
+    roi.x=Math.max(roi.s/2, Math.min(PGW-roi.s/2, roi.x+dx*st));
+    roi.y=Math.max(roi.s/2, Math.min(PGH-roi.s/2, roi.y+dy*st));
+  }
+  function act(a){
+    if(over) return;
+    if(a!=="stop" && steps>=10){ setV("Hết 10 bước — buộc phải STOP (giống agent thật).","bad"); return; }
+    if(a==="stop"){
+      var inside=pgDots.filter(function(d){ return !d.got &&
+        d.x>roi.x-roi.s/2 && d.x<roi.x+roi.s/2 && d.y>roi.y-roi.s/2 && d.y<roi.y+roi.s/2 });
+      if(roi.s>0.35*MINSIDE+0.5){
+        setV("LOẠI ✗ — ROI to hơn 35% cạnh ảnh: zoom quá nông, YOLO vẫn không thấy vật nhỏ. Phạt ràng buộc −3.0. Zoom in rồi thử lại!","bad");
+      } else if(inside.length===0){
+        setV("LOẠI ✗ — crop rỗng: 0 detection mới → phạt −1.2. Agent thật cũng bị trừ điểm y hệt khi cắt chỗ trống.","bad");
+      } else {
+        var tp=inside.length, util=Math.round(0.45*tp*100)/100;
+        var r=Math.round((3*tp + 0.75*util)*10)/10;
+        inside.forEach(function(d){d.got=true});
+        score+=tp; cropsUsed++;
+        setV("NHẬN ✓ — "+tp+" detection mới · reward ≈ 3.0×"+tp+" + 0.75×"+util+" = +"+r+". Crop được tính, ROI reset cho lát tiếp theo.","ok");
+        if(cropsUsed>=8){ over=true; setV("Đủ 8 crop! Tổng vớt được "+score+" vật. Agent thật đạt trung bình ~6 crop/ảnh vì nó còn tiết kiệm hơn bạn 😉","ok"); }
+      }
+      resetEp(false); return;
+    }
+    if(a==="zi"){ roi.s=Math.max(0.10*MINSIDE, roi.s*0.75); }
+    else if(a==="zo"){ roi.s=Math.min(0.35*MINSIDE*1.3, roi.s/0.75); }
+    else{
+      var m={u:[0,-1],d:[0,1],l:[-1,0],r:[1,0],ul:[-0.71,-0.71],ur:[0.71,-0.71],dl:[-0.71,0.71],dr:[0.71,0.71]}[a];
+      move(m[0],m[1]);
+    }
+    steps++; drawPg();
+    if(steps===10) setV("Bước 10/10 — hết ngân sách bước, phải STOP thôi.","");
+  }
+  [].slice.call(document.querySelectorAll(".padbtn")).forEach(function(b){
+    b.addEventListener("click",function(){ act(b.dataset.a); });
+  });
+  document.getElementById("pgReset").addEventListener("click",function(){ resetEp(true); });
+  resetEp(true);
+
+  /* ---------- reward calculator ---------- */
+  var cTP=document.getElementById("cTP"), cFP=document.getElementById("cFP"),
+      cHR=document.getElementById("cHR"), cOut=document.getElementById("cOut");
+  function calc(){
+    var tp=Math.max(0,+cTP.value||0), fp=Math.max(0,+cFP.value||0), hr=Math.max(0,Math.min(+cHR.value||0,tp));
+    var util=0.45*(tp+fp);
+    var crop = 0.75*util + 3*tp - 0.75*fp;
+    var empty = (tp+fp)===0;
+    if(empty) crop = -1.2;
+    var accepted = (tp+fp)>=1 && util>=0.2;
+    var total = crop*0.1 + 4.0*hr;
+    var lines=[];
+    if(empty){
+      lines.push('điểm crop = <span class="bad">−1.2</span> (crop rỗng)');
+    } else {
+      lines.push('utility ≈ 0.45 × ('+tp+'+'+fp+') = '+util.toFixed(2));
+      lines.push('điểm crop = 0.75×'+util.toFixed(2)+' + 3.0×'+tp+' − 0.75×'+fp+' = <b>'+crop.toFixed(2)+'</b>');
+    }
+    lines.push('cộng vào Q-learning: '+crop.toFixed(2)+'×0.1 + 4.0×'+hr+' hard-hit = <b>'+total.toFixed(2)+'</b>');
+    lines.push('phán quyết crop: '+(accepted?'<span class="ok">NHẬN ✓ (≥1 detection mới & utility ≥ 0.2)</span>':'<span class="bad">LOẠI ✗</span>'));
+    cOut.innerHTML=lines.join("<br>");
+  }
+  [cTP,cFP,cHR].forEach(function(el){ el.addEventListener("input",calc) });
+  calc();
+
+  /* ---------- RL agent animation ---------- */
+  var cvr=document.getElementById("cvRl"), gr=cvr.getContext("2d");
+  var RW=960, RH=500;
+  var blobs=[ {x:640,y:200,r:120,heat:1},{x:230,y:330,r:90,heat:.6},{x:430,y:130,r:60,heat:.35} ];
+  function drawHeat(){
+    gr.fillStyle="#141A20"; gr.fillRect(0,0,RW,RH);
+    blobs.forEach(function(b){
+      var gd=gr.createRadialGradient(b.x,b.y,4,b.x,b.y,b.r);
+      gd.addColorStop(0,"rgba(240,140,60,"+(0.55*b.heat)+")");
+      gd.addColorStop(1,"rgba(240,140,60,0)");
+      gr.fillStyle=gd; gr.beginPath(); gr.arc(b.x,b.y,b.r,0,6.283); gr.fill();
+    });
+    gr.strokeStyle="rgba(255,255,255,.045)"; gr.lineWidth=1;
+    for(var i=1;i<16;i++){
+      gr.beginPath(); gr.moveTo(i*RW/16,0); gr.lineTo(i*RW/16,RH); gr.stroke();
+      if(i<9){gr.beginPath(); gr.moveTo(0,i*RH/9); gr.lineTo(RW,i*RH/9); gr.stroke();}
+    }
+    gr.font="11px "+MONO;
+    gr.fillStyle="#5B6873"; gr.fillText("bản đồ objectness (từ YOLO) — cam đậm = khả năng có vật cao",14,RH-14);
+  }
+  var wp=[[430,300,220,"bắt đầu"],[520,265,200,"→ PHẢI"],[590,230,175,"↗ CHÉO"],[635,205,150,"ZOOM IN"],[640,200,120,"ZOOM IN"],[640,200,120,"STOP ✓"]];
+  function drawRoi(x,y,s,label,done){
+    gr.strokeStyle=done?"#3DDC8E":"#E9EEF3"; gr.lineWidth=done?3:2;
+    gr.setLineDash(done?[]:[7,5]);
+    gr.strokeRect(x-s/2,y-s/2,s,s); gr.setLineDash([]);
+    gr.font="600 13px "+SANS;
+    gr.fillStyle=done?"#3DDC8E":"#E9EEF3";
+    gr.fillText(label, x-s/2, y-s/2-8);
+    if(done){
+      gr.font="700 15px "+SANS;
+      gr.fillStyle="#3DDC8E";
+      gr.fillText("+ reward: 32 detection đúng mới", x-s/2, y+s/2+22);
+    }
+  }
+  if(RM){ drawHeat(); drawRoi(640,200,120,"STOP ✓",true); }
+  else{
+    var seg=0, t=0, SPEED=0.016, HOLD=70, hold=0;
+    (function loop(){
+      drawHeat();
+      if(seg>=wp.length-1){
+        drawRoi(wp[5][0],wp[5][1],wp[5][2],wp[5][3],true);
+        if(++hold>HOLD){seg=0;t=0;hold=0;}
+      }else{
+        var a=wp[seg], b=wp[seg+1];
+        var x=a[0]+(b[0]-a[0])*t, y=a[1]+(b[1]-a[1])*t, s=a[2]+(b[2]-a[2])*t;
+        drawRoi(x,y,s,b[3],false);
+        t+=SPEED; if(t>=1){t=0;seg++;}
+      }
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  /* ---------- bars ---------- */
+  var bars=document.querySelectorAll(".bar i");
+  function fire(){ bars.forEach(function(b){ b.style.width=b.dataset.w+"%" }); }
+  if(RM){ fire(); }
+  else{
+    bars.forEach(function(b){b.style.width="0%"});
+    var seen=false;
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting&&!seen){seen=true; setTimeout(fire,120);} });
+    },{threshold:.3});
+    io.observe(document.getElementById("bars"));
+  }
+})();
+</script>

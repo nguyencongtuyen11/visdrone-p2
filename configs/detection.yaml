@@ -1,21 +1,24 @@
+# Cấu hình suy luận của mô hình phát hiện đối tượng (YOLO)
 detect:
-  imgsz: 640
-  conf: 0.01
-  iou: 0.7
-  max_det: 3000
-  device: "cuda"
-  feature_layers:
-    - 16
+  imgsz: 640              # Kích thước ảnh đầu vào khi đưa vào mô hình YOLO để suy luận (ví dụ: 640x640 pixel)
+  conf: 0.01              # Ngưỡng điểm tự tin (confidence threshold) tối thiểu để mô hình giữ lại kết quả phát hiện
+  iou: 0.7                # Ngưỡng IoU sử dụng cho thuật toán NMS (Non-Maximum Suppression) nhằm lọc bỏ các hộp dự đoán bị trùng lặp
+  max_det: 3000           # Số lượng đối tượng tối đa được phép phát hiện trên mỗi bức ảnh
+  device: "cuda"          # Thiết bị phần cứng chạy suy luận (chọn "cuda" để chạy GPU Nvidia hoặc "cpu")
+  feature_layers:         # Danh sách chỉ số (index) của các lớp trong mô hình để trích xuất bản đồ đặc trưng (feature map)
+    - 16                  # Trích xuất đặc trưng từ lớp thứ 16 của mạng neural
 
+# Cấu hình xác định vùng khó phát hiện (hard regions) - nơi các vật thể nhỏ dễ bị bỏ sót
 hard_region:
-  small_area_ratio: 0.01
-  small_area_percentile: 40
-  match_iou: 0.4
-  min_detect_score: 0.25
-  target_classes:
+  small_area_ratio: 0.01  # Tỷ lệ diện tích tối đa của một hộp (bounding box) so với diện tích toàn bộ ảnh để được coi là vật thể "nhỏ"
+  small_area_percentile: 40 # Bách phân vị diện tích đối tượng trong tập dữ liệu để xác định ngưỡng vật thể nhỏ (ví dụ: lọc 40% vật thể nhỏ nhất)
+  match_iou: 0.4          # Ngưỡng IoU tối thiểu giữa hộp dự đoán và nhãn gốc (Ground Truth) để coi là khớp (match) thành công
+  min_detect_score: 0.25  # Ngưỡng điểm tự tin tối thiểu của dự đoán; nếu vật thể nhỏ có IoU khớp tốt nhất thấp hơn `match_iou` HOẶC điểm tự tin thấp hơn `min_detect_score` thì nó được định nghĩa là "vùng khó" (hard region)
+  target_classes:         # Danh sách mã định danh lớp đối tượng (Class IDs) cần được lọc và theo dõi trong quá trình tìm vùng khó
     - 0
     - 2
     - 3
     - 5
     - 8
     - 9
+

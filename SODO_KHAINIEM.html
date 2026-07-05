@@ -1,0 +1,300 @@
+<title>3 khái niệm hay lẫn — agent có phải di chuyển không?</title>
+<style>
+  :root{
+    --bg:#0F1317; --panel:#171D24; --panel2:#1D242C; --line:#2A333D;
+    --ink:#E9EEF3; --mut:#93A1AE; --dim:#5B6873;
+    --crop:#E8B33C;   /* image tiling */
+    --move:#5B9BD5;   /* di chuyen */
+    --brain:#B98BF0;  /* tile coding */
+    --good:#3DDC8E; --bad:#E86A5A;
+    --mono:"Cascadia Code","Cascadia Mono",Consolas,ui-monospace,monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);margin:0;padding:40px 20px 80px;line-height:1.6}
+  .wrap{max-width:940px;margin:0 auto;display:flex;flex-direction:column;gap:64px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
+  h1{font-size:clamp(27px,4.4vw,40px);line-height:1.15;margin:10px 0 0;text-wrap:balance;font-weight:700}
+  h2{font-size:22px;margin:6px 0 0;text-wrap:balance;font-weight:650}
+  p{margin:0;max-width:70ch}
+  .lead{color:var(--mut);font-size:16.5px;margin-top:12px}
+  section{display:flex;flex-direction:column;gap:18px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
+  b.crop{color:var(--crop)} b.move{color:var(--move)} b.brain{color:var(--brain)} b.hi{color:var(--good)}
+
+  /* 3 levels */
+  .levels{display:flex;flex-direction:column;gap:12px}
+  .lvl{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:stretch}
+  .lvl .tag{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px;
+            display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .lvl .tag b{font-size:14px} .lvl .tag span{font-size:11.5px;color:var(--dim);font-family:var(--mono)}
+  .lvl .body{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--c);
+             border-radius:8px;padding:12px 16px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+  .lvl .body .name{font-weight:650;font-size:15px;color:var(--c)}
+  .lvl .body p{font-size:13px;color:var(--mut)}
+
+  /* tile coding demo */
+  .tcwrap{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  #tc{display:block;width:100%;height:auto;cursor:crosshair;touch-action:none}
+  .tcinfo{display:flex;flex-direction:column;gap:12px}
+  .feat{font-family:var(--mono);font-size:13px;background:var(--panel2);border:1px solid var(--line);
+        border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+  .feat .row{display:flex;align-items:center;gap:9px}
+  .feat .sw{width:12px;height:12px;border-radius:3px;flex:none}
+  .hint{font-size:12.5px;color:var(--dim)}
+  @media (max-width:720px){ .tcwrap{grid-template-columns:1fr} }
+
+  /* ways to choose */
+  .ways{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  .way{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 0 14px;overflow:hidden;
+       border-top:3px solid var(--c)}
+  .way canvas{display:block;width:100%;height:auto;background:#12181E}
+  .way .txt{padding:12px 16px 0;display:flex;flex-direction:column;gap:4px}
+  .way h3{font-size:15px;margin:0;display:flex;align-items:center;gap:8px}
+  .way .speed{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:20px}
+  .way .speed.slow{background:rgba(232,106,90,.15);color:var(--bad)}
+  .way .speed.fast{background:rgba(61,220,142,.15);color:var(--good)}
+  .way .speed.none{background:rgba(147,161,174,.12);color:var(--mut)}
+  .way p{font-size:12.5px;color:var(--mut)}
+
+  /* verdict */
+  .vgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .vcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;gap:14px;align-items:flex-start}
+  .vcard .ic{font-size:30px;line-height:1}
+  .vcard h3{font-size:15.5px;margin:0 0 4px} .vcard p{font-size:13px;color:var(--mut)}
+  .vcard.win{border-color:rgba(61,220,142,.4)} .vcard.win h3{color:var(--good)}
+  .final{border:1px solid rgba(61,220,142,.35);background:linear-gradient(180deg,rgba(61,220,142,.06),transparent);
+         border-radius:10px;padding:22px 24px}
+  .final p{font-size:16.5px;max-width:none}
+  .note{font-size:12.5px;color:var(--dim)}
+  @media (max-width:720px){ .ways,.vgrid{grid-template-columns:1fr} .lvl{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Gỡ rối khái niệm · RL-SAHI</div>
+    <h1>3 thứ hay lẫn nhau — và agent có <span style="color:var(--move)">phải di chuyển</span> không?</h1>
+    <p class="lead">Ba từ "tiling / tile coding / di chuyển" nghe giống nhau nhưng ở <b>3 tầng hoàn toàn khác</b>.
+      Lẫn chúng là lẫn cả hướng đi. Trang này tách rõ, rồi trả lời: <b>không</b>, di chuyển chỉ là một cách — có cách khác.</p>
+  </header>
+
+  <!-- 3 LEVELS -->
+  <section>
+    <div class="eyebrow">Phần 1 · Ba tầng khác nhau</div>
+    <h2>Mỗi khái niệm sống ở một tầng riêng</h2>
+    <div class="levels">
+      <div class="lvl" style="--c:var(--crop)">
+        <div class="tag"><b>TẦNG 1</b><span>CẮT ẢNH Ở ĐÂU</span></div>
+        <div class="body" style="--c:var(--crop)">
+          <div class="name">Image tiling (cắt lát)</div>
+          <p>Cắt ảnh to thành ô nhỏ để vật nhỏ đủ to mà detect. <b>Đây chính là việc của SAHI.</b></p>
+        </div>
+      </div>
+      <div class="lvl" style="--c:var(--move)">
+        <div class="tag"><b>TẦNG 2</b><span>CÁCH CHỌN Ô</span></div>
+        <div class="body" style="--c:var(--move)">
+          <div class="name">Di chuyển — và 3 cách khác</div>
+          <p>Quyết định cắt ô nào. <b>Di chuyển</b> = agent lái khung đi chọn. Nhưng còn lưới cố định, chọn‑1‑phát, giữ/bỏ‑từng‑ô (phần 3).</p>
+        </div>
+      </div>
+      <div class="lvl" style="--c:var(--brain)">
+        <div class="tag"><b>TẦNG 3</b><span>BỘ NÃO AGENT</span></div>
+        <div class="body" style="--c:var(--brain)">
+          <div class="name">Tile coding ("chồng nhiều lưới")</div>
+          <p>Cách <b>mã hóa state</b> để mô hình tuyến tính học được. Là bộ não của agent — <b>KHÔNG đụng gì tới cắt ảnh.</b></p>
+        </div>
+      </div>
+    </div>
+    <p class="note">Nhầm phổ biến: nghĩ "tile coding" (tầng 3) là "cắt ảnh" (tầng 1) vì cùng chữ "tile". Thực ra chúng ở hai thế giới.</p>
+  </section>
+
+  <!-- TILE CODING DEMO -->
+  <section>
+    <div class="eyebrow">Phần 2 · Tile coding trông ra sao</div>
+    <h2>"Chồng nhiều lưới lên" — bạn nhớ đúng. Kéo chấm để hiểu</h2>
+    <p style="color:var(--mut)">Ba lưới <span style="color:var(--crop)">■</span><span style="color:var(--move)">■</span><span style="color:var(--brain)">■</span>
+      <b>lệch nhau một chút</b> phủ lên không gian state (ví dụ: vị trí khung ROI). Chấm state rơi vào <b>1 ô của mỗi lưới</b> →
+      3 ô đó = đặc trưng. Kéo chấm đi: điểm gần nhau <b>chung phần lớn ô</b> (khái quát mượt) nhưng khác 1–2 ô (phân giải tinh).</p>
+    <div class="tcwrap">
+      <div class="stage"><canvas id="tc" width="620" height="420" aria-label="Ba lưới lệch nhau, kéo chấm để xem ô kích hoạt"></canvas></div>
+      <div class="tcinfo">
+        <div class="feat" id="feat"></div>
+        <p class="hint">Học Q tuyến tính: giá trị = tổng trọng số của các ô đang bật. Chạy CPU, đơn giản — đây là cách RL <i>cổ điển</i> thay cho mạng nơ‑ron sâu.</p>
+        <p class="hint" style="color:var(--mut)">Điểm mấu chốt: đây chỉ đổi <b>cách nghĩ</b> của agent. Agent <b>vẫn làm cùng một việc</b> (vd vẫn lái khung). Đổi não ≠ đổi chiến lược.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WAYS TO CHOOSE -->
+  <section>
+    <div class="eyebrow">Phần 3 · Trả lời: agent CÓ phải di chuyển không?</div>
+    <h2>4 cách chọn ô cắt — chỉ 1 cái là "di chuyển"</h2>
+    <p style="color:var(--mut)">Đây là câu trả lời cho bạn: <b>KHÔNG</b>. Di chuyển là cách khó & chậm nhất. Ba cách kia agent <b>không hề di chuyển</b> —
+      nó <i>chọn</i> chứ không <i>lái tới</i>.</p>
+    <div class="ways">
+      <div class="way" style="--c:var(--crop)">
+        <canvas id="w1" width="440" height="240"></canvas>
+        <div class="txt"><h3>Lưới cố định <span class="speed none">không học</span></h3>
+          <p>SAHI: cắt hết ô đều nhau, mù nội dung. Đơn giản nhưng tốn 28 ô & nhiều ô trống.</p></div>
+      </div>
+      <div class="way" style="--c:var(--move)">
+        <canvas id="w2" width="440" height="240"></canvas>
+        <div class="txt"><h3>Di chuyển <span class="speed slow">CHẬM</span></h3>
+          <p>Agent lái khung đi từng bước → dừng. Phải chạy YOLO thử rồi loại. Đây là hướng đồ án gốc.</p></div>
+      </div>
+      <div class="way" style="--c:var(--good)">
+        <canvas id="w3" width="440" height="240"></canvas>
+        <div class="txt"><h3>Chọn 1 phát <span class="speed fast">NHANH</span></h3>
+          <p>Nhìn bản đồ nóng MỘT LẦN → chốt thẳng K ô tốt nhất. Không lái, không thử‑loại. Kiểu learned‑RPN.</p></div>
+      </div>
+      <div class="way" style="--c:var(--good)">
+        <canvas id="w4" width="440" height="240"></canvas>
+        <div class="txt"><h3>Giữ/bỏ từng ô <span class="speed fast">NHANH</span></h3>
+          <p>Lưới cố định, agent quyết mỗi ô "chạy hay bỏ" (contextual bandit). Một quyết định/ô, không di chuyển.</p></div>
+      </div>
+    </div>
+    <p class="note">Vậy nếu buộc phải giữ RL, <b>chọn‑1‑phát</b> hơn di chuyển: nhanh hơn, kết quả tương đương. Di chuyển là lựa chọn tệ nhất trong nhóm.</p>
+  </section>
+
+  <!-- VERDICT -->
+  <section>
+    <div class="eyebrow">Phần 4 · Nhưng nhớ bức tranh lớn</div>
+    <h2>Cả 4 cách trên đều là "cắt lát" — và đều thua "in to ra"</h2>
+    <div class="vgrid">
+      <div class="vcard">
+        <div class="ic">🔍</div>
+        <div><h3 style="color:var(--crop)">Cắt lát (mọi kiểu)</h3>
+          <p>= rê kính lúp trên ảnh, nhìn từng ô. Lưới / di chuyển / chọn‑1‑phát chỉ khác cách rê. Đều tốn nhiều lượt YOLO → chậm.</p></div>
+      </div>
+      <div class="vcard win">
+        <div class="ic">🖨️</div>
+        <div><h3>Tăng độ phân giải (imgsz 1280)</h3>
+          <p>= in tấm ảnh ra to hơn, thấy hết trong 1 liếc. 1 lượt YOLO. Trên bài này: mAP cao nhất, FP thấp nhất, nhanh gấp ~15×.</p></div>
+      </div>
+    </div>
+    <div class="final">
+      <div class="eyebrow" style="color:var(--good)">Chốt</div>
+      <p style="margin-top:8px">Đổi <b class="move">di chuyển</b> → <b class="brain">tile coding</b> = đổi não, vẫn lái, vẫn chậm.
+      Đổi <b class="move">di chuyển</b> → <b class="crop">chọn‑1‑phát/lưới</b> = nhanh hơn nhưng vẫn là cắt lát.
+      <br><b>Và mọi cắt lát đều bị <b class="hi">imgsz 1280</b> đè trên bài toán này.</b> Nếu in to được thì đừng rê kính lúp.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var MONO=getComputedStyle(document.body).getPropertyValue("--mono");
+  var SANS=getComputedStyle(document.body).getPropertyValue("--sans");
+  var COL=["#E8B33C","#5B9BD5","#B98BF0"];
+
+  /* ---------- tile coding interactive ---------- */
+  var tc=document.getElementById("tc"), g=tc.getContext("2d"), feat=document.getElementById("feat");
+  var W=620,H=420, PAD=30;
+  var NT=3, CELLS=5;                     // 3 tilings, 5x5 cells
+  var span=W-2*PAD, cw=span/CELLS;       // cell width in px (square-ish using span for both)
+  var spanY=H-2*PAD, chh=spanY/CELLS;
+  var offs=[[0,0],[cw*0.33,chh*0.33],[cw*0.66,chh*0.66]]; // moi luoi lech 1 chut
+  var pt={x:W*0.55,y:H*0.42};
+
+  function activeCell(tiling,x,y){
+    // toa do trong khong gian, tru offset roi chia cell; ket qua co the -1..CELLS
+    var cx=Math.floor((x-PAD-offs[tiling][0])/cw);
+    var cy=Math.floor((y-PAD-offs[tiling][1])/chh);
+    return [cx,cy];
+  }
+  function draw(){
+    g.fillStyle="#12181E"; g.fillRect(0,0,W,H);
+    // ve 3 luoi lech
+    for(var tl=0; tl<NT; tl++){
+      g.strokeStyle=COL[tl]+"55"; g.lineWidth=1.2;
+      var ox=PAD+offs[tl][0], oy=PAD+offs[tl][1];
+      for(var i=0;i<=CELLS;i++){
+        g.beginPath(); g.moveTo(ox+i*cw, oy-chh*0.4); g.lineTo(ox+i*cw, oy+CELLS*chh+chh*0.4); g.stroke();
+        g.beginPath(); g.moveTo(ox-cw*0.4, oy+i*chh); g.lineTo(ox+CELLS*cw+cw*0.4, oy+i*chh); g.stroke();
+      }
+    }
+    // to o kich hoat cua moi luoi
+    var rows=[];
+    for(var t2=0;t2<NT;t2++){
+      var c=activeCell(t2, pt.x, pt.y);
+      var ox2=PAD+offs[t2][0]+c[0]*cw, oy2=PAD+offs[t2][1]+c[1]*chh;
+      g.fillStyle=COL[t2]+"33"; g.fillRect(ox2,oy2,cw,chh);
+      g.strokeStyle=COL[t2]; g.lineWidth=2.5; g.strokeRect(ox2,oy2,cw,chh);
+      rows.push({c:c, col:COL[t2], t:t2});
+    }
+    // cham state
+    g.fillStyle="#E9EEF3"; g.beginPath(); g.arc(pt.x,pt.y,6,0,6.283); g.fill();
+    g.strokeStyle="#0F1317"; g.lineWidth=2; g.stroke();
+    g.font="12px "+MONO; g.fillStyle="#5B6873"; g.fillText("kéo chấm này →← trạng thái (vị trí ROI)", PAD, H-8);
+    // feature panel
+    feat.innerHTML='<div style="color:#93A1AE;font-size:11.5px">Đặc trưng đang BẬT (1 ô/lưới):</div>'+
+      rows.map(function(r){return '<div class="row"><span class="sw" style="background:'+r.col+'"></span>Lưới '+(r.t+1)+': ô ('+ (r.c[0]<0||r.c[0]>=CELLS||r.c[1]<0||r.c[1]>=CELLS?'ngoài':r.c[0]+','+r.c[1]) +')</div>';}).join("");
+  }
+  function setPt(e){
+    var r=tc.getBoundingClientRect();
+    var cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    var cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    pt.x=Math.max(PAD, Math.min(W-PAD, cx*W/r.width));
+    pt.y=Math.max(PAD, Math.min(H-PAD, cy*H/r.height));
+    draw();
+  }
+  var dragging=false;
+  tc.addEventListener("mousedown",function(e){dragging=true;setPt(e);});
+  window.addEventListener("mousemove",function(e){if(dragging)setPt(e);});
+  window.addEventListener("mouseup",function(){dragging=false;});
+  tc.addEventListener("touchstart",function(e){dragging=true;setPt(e);e.preventDefault();},{passive:false});
+  tc.addEventListener("touchmove",function(e){if(dragging){setPt(e);e.preventDefault();}},{passive:false});
+  tc.addEventListener("touchend",function(){dragging=false;});
+  draw();
+
+  /* ---------- 4 ways mini diagrams ---------- */
+  function scene(g,w,h){
+    g.fillStyle="#12181E"; g.fillRect(0,0,w,h);
+    g.fillStyle="#1B2229"; g.beginPath(); g.ellipse(w*0.5,h*0.6,w*0.42,h*0.3,0,0,6.283); g.fill();
+  }
+  function dots(g, list){ list.forEach(function(p){ g.fillStyle="#3DDC8E"; g.beginPath(); g.arc(p[0],p[1],2.4,0,6.283); g.fill(); }); }
+  var crowd=[[150,150],[165,160],[180,150],[195,165],[210,155],[160,175],[185,178],[205,172],[145,165],[220,168],
+             [300,140],[315,150],[330,142],[110,175],[125,168]];
+
+  var W1=document.getElementById("w1").getContext("2d"); scene(W1,440,240); dots(W1,crowd);
+  W1.strokeStyle="#E8B33C99"; W1.lineWidth=1.2;
+  for(var y=20;y<220;y+=48) for(var x=20;x<420;x+=66) W1.strokeRect(x,y,64,46);
+
+  var W2=document.getElementById("w2").getContext("2d"); scene(W2,440,240); dots(W2,crowd);
+  // path
+  W2.strokeStyle="#5B9BD5"; W2.lineWidth=2; W2.setLineDash([5,4]);
+  W2.beginPath(); W2.moveTo(80,60); W2.lineTo(140,100); W2.lineTo(175,150); W2.stroke(); W2.setLineDash([]);
+  [[80,60,"start"],[140,100,""],[175,150,"stop"]].forEach(function(p,i){
+    W2.fillStyle=i===2?"#3DDC8E":"#5B9BD5"; W2.beginPath(); W2.arc(p[0],p[1],4,0,6.283); W2.fill();
+  });
+  W2.strokeStyle="#3DDC8E"; W2.lineWidth=2.5; W2.strokeRect(150,120,60,58);
+  W2.fillStyle="#E9EEF3"; W2.font="11px "+SANS; W2.fillText("lái từng bước ↴", 84,52);
+
+  var W3=document.getElementById("w3").getContext("2d"); scene(W3,440,240);
+  // heatmap blobs
+  [[178,158,60,1],[315,146,40,.6]].forEach(function(b){
+    var gd=W3.createRadialGradient(b[0],b[1],4,b[0],b[1],b[2]);
+    gd.addColorStop(0,"rgba(240,140,60,"+(0.5*b[3])+")"); gd.addColorStop(1,"rgba(240,140,60,0)");
+    W3.fillStyle=gd; W3.beginPath(); W3.arc(b[0],b[1],b[2],0,6.283); W3.fill();
+  });
+  dots(W3,crowd);
+  [[150,128,60,58],[290,120,58,54],[120,150,54,52]].forEach(function(r){
+    W3.strokeStyle="#3DDC8E"; W3.lineWidth=2.5; W3.strokeRect(r[0],r[1],r[2],r[3]);
+  });
+  W3.fillStyle="#3DDC8E"; W3.font="600 11px "+SANS; W3.fillText("chốt K ô cùng lúc ✓",150,116);
+
+  var W4=document.getElementById("w4").getContext("2d"); scene(W4,440,240); dots(W4,crowd);
+  var k=0;
+  for(var yy=30;yy<210;yy+=60) for(var xx=30;xx<410;xx+=95){
+    var hit=[1,4,5,7].indexOf(k)>=0;   // vai o duoc giu
+    W4.strokeStyle=hit?"#3DDC8E":"#5B6873"; W4.lineWidth=hit?2.4:1.2; W4.strokeRect(xx,yy,88,52);
+    W4.fillStyle=hit?"#3DDC8E":"#E86A5A"; W4.font="700 16px "+SANS;
+    W4.fillText(hit?"✓":"✗", xx+38, yy+33);
+    k++;
+  }
+})();
+</script>

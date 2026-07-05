@@ -1,0 +1,35 @@
+# Train RL (Deep-DQN crop-outcome) trên detector FINE-TUNE.
+# CHỈ include ft.yaml (weights fine-tune, cache_ft, class đồng nhất, 10 lớp) — KHÔNG include
+# local.yaml để tránh nó kéo lại default.yaml đè mất override của ft.yaml. Tham số train nhanh
+# nhét thẳng vào đây. Output riêng runs/ft_rl.
+includes:
+  - ft.yaml
+
+paths:
+  dqn_out_dir: runs/ft_rl/dqn
+  checkpoint: runs/ft_rl/dqn/best.pt
+
+env:
+  max_steps: 10
+
+infer:
+  max_slice_attempts: 14
+
+train:
+  use_crop_outcome_reward: true
+  eval_benchmark_images: 0
+  optimize_every: 8
+  num_envs: 6
+  batch_size: 256
+  min_replay: 512
+  replay_size: 30000
+  episodes: 1000
+  eval_interval: 50
+  eval_episodes: 12
+  eval_slice_cost_weight: 0.0
+  resume: false
+  log_interval: 10
+  epsilon_decay_steps: 1500
+  guide_decay_steps: 1500
+  curriculum_steps: 1500
+  per_beta_frames: 20000

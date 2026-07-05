@@ -1,0 +1,8 @@
+includes:
+  - ft.yaml
+env:
+  max_steps: 10
+  max_slices: 16
+infer:
+  max_slice_attempts: 26
+  min_slice_utility: 0.1

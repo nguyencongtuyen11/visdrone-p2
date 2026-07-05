@@ -1,0 +1,8 @@
+# S1-long: recall-max, train dài 1000 ep để policy ổn định hơn
+includes:
+  - local.yaml
+paths:
+  dqn_out_dir: runs/sweep/s1long/dqn
+  checkpoint: runs/sweep/s1long/dqn/best.pt
+train:
+  episodes: 1000

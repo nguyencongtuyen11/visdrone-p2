@@ -1,0 +1,5 @@
+# output_conf=0.05 (đẩy recall tối đa)
+includes:
+  - default.yaml
+infer:
+  output_conf: 0.05

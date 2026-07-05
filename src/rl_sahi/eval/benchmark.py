@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from ultralytics import YOLO
 
-from rl_sahi.common.boxes import area, clip_boxes, iou_matrix
+from rl_sahi.common.boxes import area, box_from_center, clip_boxes, iou_matrix
 from rl_sahi.common.cache import DetectionCache
 from rl_sahi.common.class_mapping import ClassMapping
 from rl_sahi.common.data import image_to_label_path, iter_images, read_yolo_labels
@@ -37,6 +37,9 @@ class BenchmarkConfig:
     fixed_slice_fraction: float = 0.35
     fixed_overlap: float = 0.2
     small_area_percentile: float = 40.0
+    topk_slices: int = 6
+    topk_slice_fraction: float = 0.35
+    topk_min_separation: int = 2
     target_classes: tuple[int, ...] = (0, 2, 3, 5, 8, 9)
     class_mapping: ClassMapping = field(default_factory=ClassMapping)
 
@@ -147,6 +150,86 @@ def _predict_fixed_sahi(
     scores_parts = [full_scores]
     classes_parts = [full_classes]
     rois = _fixed_grid_rois(det.image_shape, bench_cfg.fixed_slice_fraction, bench_cfg.fixed_overlap)
+    for roi in rois:
+        boxes_i, scores_i, classes_i = run_yolo_on_crop(
+            model,
+            image_path,
+            roi,
+            imgsz=cfg.slice_imgsz,
+            conf=cfg.output_conf,
+            iou=cfg.iou,
+            max_det=cfg.max_det,
+            device=cfg.device,
+        )
+        classes_i = cfg.class_mapping.map_model_classes(classes_i)
+        boxes_i, scores_i, classes_i = _filter_classes(boxes_i, scores_i, classes_i, cfg.target_classes)
+        boxes_parts.append(boxes_i)
+        scores_parts.append(scores_i)
+        classes_parts.append(classes_i)
+    boxes, scores, classes = _merge_predictions(det.image_shape, cfg.merge_iou, boxes_parts, scores_parts, classes_parts)
+    return boxes, scores, classes, len(rois)
+
+
+def _objectness_grid(det: DetectionCache) -> np.ndarray:
+    obj = np.nan_to_num(np.asarray(det.objectness_map, dtype=np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+    if obj.ndim == 3:
+        return obj.max(axis=0).astype(np.float32)
+    if obj.ndim == 2:
+        return obj.astype(np.float32)
+    return np.zeros((0, 0), dtype=np.float32)
+
+
+def _topk_peak_rois(
+    grid: np.ndarray,
+    image_shape: tuple[int, int],
+    k: int,
+    fraction: float,
+    separation: int,
+) -> list[np.ndarray]:
+    if grid.size == 0 or int(k) <= 0:
+        return []
+    h, w = image_shape
+    grid_y, grid_x = grid.shape
+    work = grid.astype(np.float32).copy()
+    side = max(1.0, min(h, w) * float(fraction))
+    sep = max(int(separation), 0)
+    rois: list[np.ndarray] = []
+    for _ in range(int(k)):
+        flat_idx = int(np.argmax(work))
+        value = float(work.flat[flat_idx])
+        if not np.isfinite(value) or value <= 0.0:
+            break
+        y, x = np.unravel_index(flat_idx, work.shape)
+        cx = (float(x) + 0.5) * w / max(grid_x, 1)
+        cy = (float(y) + 0.5) * h / max(grid_y, 1)
+        rois.append(box_from_center(float(cx), float(cy), side, image_shape))
+        y0, y1 = max(0, int(y) - sep), min(grid_y, int(y) + sep + 1)
+        x0, x1 = max(0, int(x) - sep), min(grid_x, int(x) + sep + 1)
+        work[y0:y1, x0:x1] = -np.inf
+    return rois
+
+
+def _predict_objectness_topk(
+    model: YOLO,
+    image_path: Path,
+    det: DetectionCache,
+    cfg: InferenceConfig,
+    bench_cfg: BenchmarkConfig,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+    """Heuristic baseline: place slices at the top-K peaks of the detector objectness
+    heatmap, with no RL policy. Isolates the value of the learned ROI selection by
+    comparing RL-SAHI against naive peak-picking at a comparable crop budget."""
+    full_boxes, full_scores, full_classes = _full_predictions(det, cfg)
+    boxes_parts = [full_boxes]
+    scores_parts = [full_scores]
+    classes_parts = [full_classes]
+    rois = _topk_peak_rois(
+        _objectness_grid(det),
+        det.image_shape,
+        bench_cfg.topk_slices,
+        bench_cfg.topk_slice_fraction,
+        bench_cfg.topk_min_separation,
+    )
     for roi in rois:
         boxes_i, scores_i, classes_i = run_yolo_on_crop(
             model,
@@ -496,7 +579,7 @@ def benchmark_split(
     state_cfg = checkpoint_data.get("state_cfg_obj", StateConfig())
 
     ground_truth: dict[str, tuple[np.ndarray, np.ndarray, tuple[int, int]]] = {}
-    predictions = {"yolo_full": {}, "fixed_grid_sahi": {}, "rl_sahi": {}}
+    predictions = {"yolo_full": {}, "fixed_grid_sahi": {}, "objectness_topk": {}, "rl_sahi": {}}
     crops = {key: [] for key in predictions}
     latency = {key: [] for key in predictions}
 
@@ -539,6 +622,12 @@ def benchmark_split(
         predictions["fixed_grid_sahi"][image_id] = (boxes, scores, classes)
         latency["fixed_grid_sahi"].append(time.perf_counter() - start)
         crops["fixed_grid_sahi"].append(crop_count)
+
+        start = time.perf_counter()
+        boxes, scores, classes, crop_count = _predict_objectness_topk(model, image_path, det, infer_cfg, bench_cfg)
+        predictions["objectness_topk"][image_id] = (boxes, scores, classes)
+        latency["objectness_topk"].append(time.perf_counter() - start)
+        crops["objectness_topk"].append(crop_count)
 
         start = time.perf_counter()
         boxes, scores, classes, crop_count = _predict_rl_sahi(

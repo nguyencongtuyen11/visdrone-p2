@@ -1,0 +1,20 @@
+# VisDrone-DET dataset cho Ultralytics (10 lop, 0-9).
+# LUU Y: Ultralytics giai duong dan `path` tuong doi theo settings.datasets_dir (~/datasets),
+# KHONG theo thu muc hien tai. Vi vay HAY dung scripts/train_p2.py -- no tu sinh
+# file configs/data_visdrone.autogen.yaml voi duong dan TUYET DOI dung may dang chay.
+# File nay chi de tham khao / chay tay (sua `path` thanh tuyet doi neu dung truc tiep).
+path: ./data/raw
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: pedestrian
+  1: people
+  2: bicycle
+  3: car
+  4: van
+  5: truck
+  6: tricycle
+  7: awning-tricycle
+  8: bus
+  9: motor

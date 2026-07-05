@@ -1,0 +1,16 @@
+# Bản TIẾT KIỆM: 2000 ep (~1-1.5h T4/seed) — dữ liệu cho thấy học bão hòa sau ~500 ep
+# nên 2000 ep nhiều khả năng ngang 6000 ep. Output TÁCH RIÊNG khỏi bản full để không đụng resume.
+includes:
+  - ft_rl_cloud_s44.yaml
+
+paths:
+  dqn_out_dir: runs/ft_rl_fast_s44/dqn
+  checkpoint: runs/ft_rl_fast_s44/dqn/best.pt
+
+train:
+  episodes: 2000
+  epsilon_decay_steps: 3000
+  guide_decay_steps: 3000
+  curriculum_steps: 3000
+  per_beta_frames: 40000
+  eval_interval: 100

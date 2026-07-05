@@ -1,0 +1,9 @@
+# S1-crop: BẬT crop-outcome reward (YOLO thật + GT trong vòng lặp) — reward "đúng bài".
+includes:
+  - local.yaml
+paths:
+  dqn_out_dir: runs/sweep/s1crop/dqn
+  checkpoint: runs/sweep/s1crop/dqn/best.pt
+train:
+  use_crop_outcome_reward: true
+  episodes: 400

@@ -1,0 +1,8 @@
+# S3: giống S1 nhưng max_slices=8 -> ít lát cắt hơn
+includes:
+  - local.yaml
+paths:
+  dqn_out_dir: runs/sweep/s3/dqn
+  checkpoint: runs/sweep/s3/dqn/best.pt
+env:
+  max_slices: 8

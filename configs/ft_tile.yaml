@@ -1,0 +1,5 @@
+# TILING (tile-coding) trên detector FINE-TUNE. Chỉ include ft.yaml (weights ft, cache_ft, 10 lớp).
+includes:
+  - ft.yaml
+env:
+  max_steps: 10

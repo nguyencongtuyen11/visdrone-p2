@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import random
+import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,7 @@ from rl_sahi.rl.trainer import (
 )
 
 
+# giải thích: Hàm tải checkpoint PyTorch lên CPU một cách an toàn, xử lý các phiên bản PyTorch khác nhau
 def _torch_load_checkpoint(path: Path) -> dict[str, Any]:
     try:
         return torch.load(path, map_location="cpu", weights_only=False)
@@ -49,6 +51,7 @@ def _torch_load_checkpoint(path: Path) -> dict[str, Any]:
         return torch.load(path, map_location="cpu")
 
 
+# giải thích: Di chuyển trạng thái (state) của bộ tối ưu hóa (optimizer) sang thiết bị tính toán (CPU hoặc GPU) chỉ định
 def _optimizer_state_to_device(optimizer: torch.optim.Optimizer, device: torch.device) -> None:
     for state in optimizer.state.values():
         for key, value in list(state.items()):
@@ -56,6 +59,7 @@ def _optimizer_state_to_device(optimizer: torch.optim.Optimizer, device: torch.d
                 state[key] = value.to(device)
 
 
+# giải thích: Lấy trạng thái sinh số ngẫu nhiên (RNG state) hiện tại của Python, NumPy và PyTorch để phục vụ lưu checkpoint
 def _rng_state() -> dict[str, Any]:
     state: dict[str, Any] = {
         "python": random.getstate(),
@@ -67,6 +71,7 @@ def _rng_state() -> dict[str, Any]:
     return state
 
 
+# giải thích: Khôi phục trạng thái sinh số ngẫu nhiên từ checkpoint đã lưu
 def _restore_rng_state(state: dict[str, Any]) -> None:
     if not state:
         return
@@ -80,6 +85,7 @@ def _restore_rng_state(state: dict[str, Any]) -> None:
         torch.cuda.set_rng_state_all(state["torch_cuda"])
 
 
+# giải thích: Hàm lưu checkpoint cho phép tiếp tục (resume) huấn luyện sau này
 def _save_resume_checkpoint(
     path: Path,
     policy: QNetwork,
@@ -103,6 +109,7 @@ def _save_resume_checkpoint(
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = path.with_suffix(path.suffix + ".tmp")
+    # giải thích: Lưu các tham số huấn luyện, mô hình, replay buffer, optimizer, scheduler và RNG state
     torch.save(
         {
             "checkpoint_type": "rl_sahi_train_resume",
@@ -133,6 +140,7 @@ def _save_resume_checkpoint(
     tmp_path.replace(path)
 
 
+# giải thích: Lớp lưu trữ trạng thái chạy song song của môi trường (Worker)
 @dataclass
 class EnvWorker:
     episode: int
@@ -168,6 +176,7 @@ class EnvWorker:
     info: dict
     done: bool
 
+# giải thích: Hàm huấn luyện DQN theo lô (batched) đa luồng / song song môi trường giả lập
 def batched_train_dqn(
     image_root: Path, cache_root: Path, split: str, out_dir: Path, cfg: TrainConfig, env_cfg: EnvConfig, state_cfg: StateConfig,
     limit: int | None = None, device_name: str | None = None, detection_metadata: dict[str, Any] | None = None,
@@ -175,10 +184,12 @@ def batched_train_dqn(
     eval_weights: Path | None = None, infer_cfg: InferenceConfig | None = None, bench_cfg: BenchmarkConfig | None = None,
     eval_use_cache: bool = True,
 ) -> Path:
+    # giải thích: Khởi tạo hạt giống ngẫu nhiên để đảm bảo tính tái lặp
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
 
+    # giải thích: Tải tập dữ liệu huấn luyện và kiểm thử từ bộ nhớ đệm
     dataset = CachedEpisodeDataset(image_root=image_root, cache_root=cache_root, split=split, limit=limit, preload=cfg.preload_cache, detection_metadata=detection_metadata)
     
     val_dataset = None
@@ -191,6 +202,7 @@ def batched_train_dqn(
     inference_model = None
     benchmark_model = None
     benchmark_images: list[Path] = []
+    # giải thích: Chuẩn bị mô hình phát hiện vật thể YOLO cho quá trình đánh giá hoặc tính toán phần thưởng nếu được yêu cầu
     if getattr(cfg, "eval_benchmark_images", 0) > 0:
         if eval_weights is None or label_root is None or infer_cfg is None or bench_cfg is None:
             raise RuntimeError("Benchmark validation requires weights, labels, inference config, and benchmark config")
@@ -203,6 +215,7 @@ def batched_train_dqn(
         if eval_weights is None or infer_cfg is None:
             raise RuntimeError("Crop outcome reward requires eval_weights and inference config")
         inference_model = load_yolo(eval_weights, device=infer_cfg.device)
+    # giải thích: Tạo bộ đánh giá kết quả cắt (crop outcome evaluator) để đo đạc độ chính xác của vùng cắt lát
     crop_evaluator = make_crop_outcome_evaluator(
         model=inference_model,
         image_root=image_root,
@@ -216,24 +229,29 @@ def batched_train_dqn(
         eval_use_cache=eval_use_cache,
     )
 
+    # giải thích: Lấy chiều của vector trạng thái (state dimension) và cấu trúc biểu diễn không gian (state layout)
     probe_det = dataset.first_detection()
     probe_env = SliceEnv(probe_det, None, env_cfg=env_cfg, state_cfg=state_cfg, target_classes=target_classes, class_mapping=class_mapping)
     state_dim = int(probe_env.reset().shape[0])
     layout = state_layout_from_detection(probe_det, state_cfg)
 
+    # giải thích: Cấu hình thiết bị phần cứng và khởi tạo mạng nơ-ron Q (mạng chính và mạng đích)
     device = configure_torch_runtime(device_name)
     policy = QNetwork(state_dim, hidden_dim=cfg.hidden_dim, layout=layout, use_spatial_cnn=cfg.use_spatial_cnn, dueling=cfg.dueling).to(device)
     target_net = QNetwork(state_dim, hidden_dim=cfg.hidden_dim, layout=layout, use_spatial_cnn=cfg.use_spatial_cnn, dueling=cfg.dueling).to(device)
     target_net.load_state_dict(policy.state_dict())
     
+    # giải thích: Thiết lập optimizer và cosine learning rate scheduler
     optimizer = torch.optim.AdamW(policy.parameters(), lr=cfg.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=cfg.episodes, eta_min=1e-6)
 
+    # giải thích: Khởi tạo bộ nhớ đệm trải nghiệm (replay buffer), có thể chọn Prioritized Replay Buffer
     if cfg.use_per:
         replay: ReplayBuffer | PrioritizedReplayBuffer = PrioritizedReplayBuffer(capacity=cfg.replay_size, alpha=cfg.per_alpha, beta_start=cfg.per_beta_start, beta_frames=cfg.per_beta_frames)
     else:
         replay = ReplayBuffer(cfg.replay_size)
 
+    # giải thích: Thiết lập các đường dẫn lưu log và lưu checkpoints
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     log_path = out_dir / "train_log.csv"
@@ -251,6 +269,7 @@ def batched_train_dqn(
     scheduler_steps = 0
     resume_loaded = False
 
+    # giải thích: Nếu cấu hình cho phép và tồn tại checkpoint thì thực hiện nạp lại trạng thái huấn luyện cũ
     if bool(getattr(cfg, "resume", True)) and resume_path.exists():
         resume_data = _torch_load_checkpoint(resume_path)
         if int(resume_data.get("state_dim", -1)) != state_dim:
@@ -288,9 +307,11 @@ def batched_train_dqn(
     if episodes_completed >= cfg.episodes:
         print(f"[batched_train] resume checkpoint already completed {episodes_completed}/{cfg.episodes} episodes")
 
+    # giải thích: Hàm khởi động lại một worker mới với tập dữ liệu ngẫu nhiên của một tập (episode) mới
     def reset_worker(episode: int) -> EnvWorker:
         det, hard = dataset.random_episode()
         current_max_slices = env_cfg.max_slices
+        # giải thích: Áp dụng chương trình huấn luyện tiệm tiến (curriculum learning) nếu được cấu hình
         if cfg.use_curriculum:
             curriculum_frac = min(float(global_step) / max(cfg.curriculum_steps, 1), 1.0)
             current_max_slices = max(1, int(env_cfg.max_slices * curriculum_frac))
@@ -333,6 +354,7 @@ def batched_train_dqn(
             losses=[], info={}, done=False
         )
 
+    # giải thích: Tạo danh sách các worker chạy song song ban đầu
     active_workers = []
     for _ in range(num_envs):
         if episodes_started < cfg.episodes:
@@ -375,6 +397,22 @@ def batched_train_dqn(
         if not append_log:
             writer.writeheader()
 
+        loop_start = time.perf_counter()
+        episodes_at_start = episodes_completed
+        last_log_time = loop_start
+        last_log_ep = episodes_completed
+        # giải thích: Đảm bảo đánh giá (và cập nhật best.pt) chạy đủ dày dù eval_interval được đặt
+        # lớn hơn tổng số episode. Không có cái này, run ngắn chỉ eval ở ep 1 và best.pt bị kẹt.
+        eval_interval_eff = max(1, min(int(cfg.eval_interval), max(1, int(cfg.episodes) // 20)))
+
+        # giải thích: Hàm định dạng thời gian giây thành định dạng Giờ:Phút:Giây (H:MM:SS)
+        def _fmt_hms(seconds: float) -> str:
+            seconds = int(max(seconds, 0))
+            h, rem = divmod(seconds, 3600)
+            m, s = divmod(rem, 60)
+            return f"{h:d}:{m:02d}:{s:02d}"
+
+        # giải thích: Vòng lặp huấn luyện chính cho tới khi không còn worker nào hoạt động
         while active_workers:
             states = [w.state for w in active_workers]
             valid_masks = [w.env.valid_actions() for w in active_workers]
@@ -384,21 +422,26 @@ def batched_train_dqn(
             actions = [Action.STOP] * len(active_workers)
             nn_indices = []
             
+            # giải thích: Xác định hành động cho mỗi worker dựa trên chính sách epsilon-greedy hoặc guided-action
             for i, w in enumerate(active_workers):
                 valid_mask = valid_masks[i]
                 valid_actions = np.flatnonzero(valid_mask)
                 if len(valid_actions) == 0:
                     valid_actions = np.asarray([int(Action.STOP)], dtype=np.int64)
+                # giải thích: Hành động được dẫn đường (guided action) từ thuật toán mẫu
                 if random.random() < guide_probs[i]:
                     action = w.env.guided_action()
                     if int(action) < len(valid_mask) and bool(valid_mask[int(action)]):
                         actions[i] = action
                         continue
+                # giải thích: Lựa chọn hành động ngẫu nhiên (thăm dò - exploration)
                 if random.random() < epsilons[i]:
                     actions[i] = Action(int(random.choice(valid_actions.tolist())))
                     continue
+                # giải thích: Lựa chọn hành động khai thác (exploitation) bằng mạng nơ-ron Q
                 nn_indices.append(i)
                 
+            # giải thích: Dự đoán các giá trị Q từ mạng chính cho các worker cần dùng mô hình
             if nn_indices:
                 batch_states = np.stack([states[i] for i in nn_indices])
                 with torch.no_grad():
@@ -414,6 +457,8 @@ def batched_train_dqn(
             crop_indices: list[int] = []
             crop_paths = []
             crop_rois = []
+            
+            # giải thích: Thực hiện bước hành động trên môi trường giả lập đối với từng worker
             for i, w in enumerate(active_workers):
                 result = w.env.step(actions[i])
                 step_results.append(result)
@@ -426,6 +471,7 @@ def batched_train_dqn(
                     crop_paths.append(w.det.image_path)
                     crop_rois.append(w.env.roi.copy())
 
+            # giải thích: Chạy suy luận phát hiện vật thể trên vùng cắt lát để xác định phần thưởng cuối (terminal reward)
             if crop_indices and crop_evaluator is not None:
                 crop_predictions = crop_evaluator.crop_predictions_many(crop_paths, crop_rois)
                 for i, (raw_boxes, raw_scores, raw_classes) in zip(crop_indices, crop_predictions):
@@ -447,6 +493,7 @@ def batched_train_dqn(
                     step_results[i].info.update(outcome.info())
                     terminal_outcomes[i] = outcome
 
+            # giải thích: Cập nhật phần thưởng, bộ đệm n-step và lưu trữ dữ liệu vào replay buffer
             for i in range(len(active_workers)):
                 w = active_workers[i]
                 action = actions[i]
@@ -483,17 +530,20 @@ def batched_train_dqn(
                 w.info = result.info
                 global_step += 1
                 
+                # giải thích: Thực hiện bước tối ưu hóa trọng số (backpropagation) cho mô hình Q
                 optimize_every = max(int(cfg.optimize_every), 1)
                 if len(replay) >= cfg.min_replay and global_step % optimize_every == 0:
                     loss = optimize(policy, target_net, optimizer, replay, cfg.batch_size, cfg.gamma ** getattr(cfg, "n_step", 1), device, double_dqn=cfg.double_dqn, reward_clip=cfg.reward_clip)
                     if loss is not None:
                         optimizer_steps += 1
                         w.losses.append(loss)
+                        # giải thích: Cập nhật mềm (soft update) hoặc định kỳ cập nhật cứng cho mạng target
                         if cfg.use_soft_update:
                             soft_update(policy, target_net, cfg.tau)
                 if not cfg.use_soft_update and global_step % cfg.target_update == 0:
                     target_net.load_state_dict(policy.state_dict())
                     
+                # giải thích: Xử lý khi một lát cắt hoàn tất (Done) trong tập dữ liệu
                 if result.done:
                     while len(w.n_step_buffer) > 0:
                         ret = 0.0
@@ -521,6 +571,8 @@ def batched_train_dqn(
                         reject_slice = reject_slice or new_hits < env_cfg.min_new_hits_to_accept
                     if reject_slice:
                         w.rejected_slices += 1
+                    
+                    # giải thích: Quyết định có dừng tập (episode) dựa trên sự trùng lặp vùng cắt hoặc đạt giới hạn số lần cắt tối đa
                     stop_episode = bool(reject_slice and repeat_overlap >= 0.95)
                     if not reject_slice:
                         w.previous_rois.append(w.env.roi.copy())
@@ -543,6 +595,8 @@ def batched_train_dqn(
                         )
                     elif w.attempt_idx >= w.current_max_attempts:
                         stop_episode = True
+                        
+                    # giải thích: Nếu tập hiện tại kết thúc, thực hiện ghi log và đánh giá mô hình
                     if stop_episode:
                         if optimizer_steps > 0:
                             scheduler.step()
@@ -569,7 +623,8 @@ def batched_train_dqn(
                         }
                         
                         selected_score = None
-                        if completed_episode == 1 or completed_episode % max(int(cfg.eval_interval), 1) == 0:
+                        # giải thích: Thực hiện đánh giá chính sách định kỳ
+                        if completed_episode == 1 or completed_episode % eval_interval_eff == 0 or completed_episode == cfg.episodes:
                             if val_dataset is not None:
                                 metrics = evaluate_policy(policy, val_dataset, env_cfg, state_cfg, cfg, device, target_classes=target_classes, class_mapping=class_mapping)
                                 row["val_recall"] = round(metrics["val_recall"], 6)
@@ -600,6 +655,7 @@ def batched_train_dqn(
                                 row["val_crops"] = round(bench_metrics["crops_per_image"], 6)
                                 row["val_benchmark_score"] = round(selected_score, 6)
                                 
+                        # giải thích: Lưu mô hình tốt nhất nếu điểm số val cải thiện
                         if selected_score is not None and selected_score > best_score:
                             best_score = selected_score
                             save_checkpoint(best_path, policy, state_dim, cfg, env_cfg, state_cfg, layout, detection_metadata=detection_metadata)
@@ -620,16 +676,27 @@ def batched_train_dqn(
                                     f"small_recall={row['val_small_recall']} "
                                     f"benchmark_score={row['val_benchmark_score']}"
                                 )
+                            now = time.perf_counter()
+                            elapsed = now - loop_start
+                            # rolling rate since last log = excludes one-time preload and prior eval spikes
+                            recent_eps = max(completed_episode - last_log_ep, 1)
+                            recent_per_ep = (now - last_log_time) / recent_eps
+                            remaining = max(cfg.episodes - completed_episode, 0)
+                            eta_s = recent_per_ep * remaining
+                            last_log_time = now
+                            last_log_ep = completed_episode
                             print(
                                 f"[batched_train] ep={completed_episode}/{cfg.episodes} reward={w.total_reward:.3f} "
                                 f"loss={mean_loss:.4f} eps={epsilon_by_step(global_step, cfg):.3f} "
                                 f"slices={w.accepted_slices}/{w.current_max_slices} "
-                                f"rejected={w.rejected_slices} covered={row['covered']}/{row['hard_total']}{val_msg}"
+                                f"rejected={w.rejected_slices} covered={row['covered']}/{row['hard_total']}{val_msg} "
+                                f"| elapsed={_fmt_hms(elapsed)} eta~{_fmt_hms(eta_s)} ({recent_per_ep:.2f}s/ep)"
                             )
                         
                         w.done = True
                         episodes_completed = completed_episode
                         resume_interval = max(int(getattr(cfg, "resume_interval", cfg.log_interval)), 1)
+                        # giải thích: Lưu checkpoint định kỳ để khôi phục khi cần thiết
                         if bool(getattr(cfg, "resume", True)) and (
                             episodes_completed == 1 or episodes_completed % resume_interval == 0
                         ):
@@ -655,6 +722,7 @@ def batched_train_dqn(
                                 scheduler_steps,
                             )
                     else:
+                        # giải thích: Khởi tạo lại môi trường cắt lát cho nỗ lực cắt lát (attempt) tiếp theo
                         w.env = SliceEnv(
                             w.det,
                             w.hard,
@@ -669,6 +737,7 @@ def batched_train_dqn(
                         w.state = w.env.reset()
                         w.n_step_buffer.clear()
             
+            # giải thích: Chuẩn bị danh sách các worker cho bước lặp tiếp theo
             next_active_workers = []
             for w in active_workers:
                 if w.done:
@@ -679,6 +748,7 @@ def batched_train_dqn(
                     next_active_workers.append(w)
             active_workers = next_active_workers
             
+    # giải thích: Lưu checkpoint của lượt cuối cùng (last.pt) và checkpoint phục hồi (resume.pt) khi kết thúc
     save_checkpoint(last_path, policy, state_dim, cfg, env_cfg, state_cfg, layout, detection_metadata=detection_metadata)
     if bool(getattr(cfg, "resume", True)):
         _save_resume_checkpoint(

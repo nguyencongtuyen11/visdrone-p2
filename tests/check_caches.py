@@ -18,11 +18,14 @@ from rl_sahi.common.cache import (
 from rl_sahi.common.data import iter_images
 import numpy as np
 
+
+# giải thích: Hàm chính kiểm tra tính tồn tại và tính hợp lệ của tệp cache phát hiện (detection cache)
 def main():
     cfg = load_default_config(None, ROOT)
     state_cfg = cfg.dataclass_instance("state", StateConfig)
     detect_cfg = cfg.section("detect")
     
+    # giải thích: Tạo siêu dữ liệu (metadata) kỳ vọng dựa trên các cấu hình hiện tại để đối chiếu
     expected_metadata = detection_cache_metadata(
         weights=cfg.path_value("weights"),
         imgsz=int(detect_cfg["imgsz"]),
@@ -42,11 +45,13 @@ def main():
     cache_root = cfg.path_value("cache_root")
     split = "train"
     
+    # giải thích: Lấy ra tối đa 5 ảnh để thực hiện kiểm tra
     images = list(iter_images(image_root, split=split, limit=5))
     if not images:
         print("No images found!")
         return
         
+    # giải thích: Kiểm tra từng ảnh xem cache phát hiện và cache vùng khó có tồn tại và khớp metadata hay không
     for image_path in images:
         det_path = detection_cache_path(cache_root, split, image_path)
         hard_path = hard_region_cache_path(cache_root, split, image_path)

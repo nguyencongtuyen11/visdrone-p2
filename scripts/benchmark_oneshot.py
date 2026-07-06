@@ -15,6 +15,10 @@ So sanh cung run voi ban tuan tu cu:  them --with-seq
 import sys, time, argparse
 sys.path.insert(0, "src")
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+# --- chan warning spam ("'half' is deprecated") de terminal doc duoc; KHONG doi hanh vi ---
+import warnings, logging
+warnings.filterwarnings("ignore")
+logging.getLogger("ultralytics").addFilter(lambda r: "deprecated" not in r.getMessage())
 from pathlib import Path
 import numpy as np, torch
 from rl_sahi.common.config import load_default_config
@@ -119,7 +123,11 @@ get_initial_detection(model=model, weights=str(WEIGHTS), image_path=images[0], w
 run_yolo_on_crops(model, [images[0]] * 2, [np.array([0, 0, 320, 320], "f4"), np.array([100, 100, 500, 500], "f4")],
     imgsz=SLI, conf=0.1, iou=0.7, max_det=3000, device=dev); sync()
 
-for img in images:
+t0_all = time.perf_counter()
+for _idx, img in enumerate(images):
+    if _idx % 10 == 0 and _idx > 0:
+        _el = time.perf_counter() - t0_all
+        print(f"[oneshot] {_idx}/{len(images)} anh | {_el:.0f}s troi qua | uoc con ~{_el/_idx*(len(images)-_idx):.0f}s", flush=True)
     iid = img.stem
     t = nw()
     det = get_initial_detection(model=model, weights=str(WEIGHTS), image_path=img, weights_imgsz=BASE,

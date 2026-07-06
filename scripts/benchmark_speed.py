@@ -9,6 +9,9 @@ Xem moc 1-luot @1280:  python scripts/benchmark_speed.py --limit 100 --base 1280
 import sys, time, argparse
 sys.path.insert(0, "src")
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+import warnings, logging
+warnings.filterwarnings("ignore")
+logging.getLogger("ultralytics").addFilter(lambda r: "deprecated" not in r.getMessage())
 from pathlib import Path
 import numpy as np, torch
 from rl_sahi.common.config import load_default_config

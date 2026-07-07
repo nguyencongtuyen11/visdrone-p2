@@ -115,8 +115,11 @@ for img in images:
         rej = info.get("stop_due_to_old_overlap") or info.get("stop_due_to_attempted_overlap") or \
               (icfg.require_stop_for_acceptance and (info.get("stop_due_to_max_steps") or info.get("stop_due_to_stalled_roi")))
         if rej:
+            # FIX (audit CRITICAL): tinh overlap TRUOC khi append (nhu production _predict_rl_sahi);
+            # neu append truoc thi roi tu-so-voi-chinh-no = 1.0 -> break ngay lan reject dau -> mat lat.
+            stop_now = _attempt_overlap(roi, att) >= 0.95
             att.append(roi)
-            if _attempt_overlap(roi, att) >= 0.95: break
+            if stop_now: break
             continue
         b, s, c = run_yolo_on_crop(model, img, roi, imgsz=SLI, conf=0.1, iou=0.7, max_det=3000, device=dev)
         att.append(roi); c = cm.map_model_classes(c); b, s, c = _filter_classes(b, s, c, tc)

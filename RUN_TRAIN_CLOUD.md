@@ -19,7 +19,7 @@ python scripts/detect.py --config configs/ft_rl_cloud_s42.yaml --split train
 python scripts/hard_region.py --config configs/ft_rl_cloud_s42.yaml --split train
 
 # 4. TRAIN RL 6000 ep (crop-outcome, reward da fix). CHAY LAU (~qua dem) -> dung tmux/nohup:
-nohup python scripts/train.py --config configs/ft_rl_cloud_s42.yaml --split train --device 0 > train_s42.log 2>&1 &
+nohup python scripts/train.py --config configs/ft_rl_cloud_s42.yaml --split train --device cuda > train_s42.log 2>&1 &
 tail -f train_s42.log                       # xem tien do; Ctrl-C de thoat tail (train van chay)
 ```
 

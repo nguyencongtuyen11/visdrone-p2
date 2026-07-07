@@ -44,6 +44,9 @@ def resolve_torch_device(device: DeviceLike = None) -> torch.device:
             if directml is None:
                 raise RuntimeError("DirectML device requested, but torch-directml is not available.")
             return directml
+        elif normalized.isdigit():
+            # Chap nhan kieu ultralytics: "0","1"... -> "cuda:0" (neu co CUDA), nguoc lai CPU
+            return torch.device(f"cuda:{normalized}" if torch.cuda.is_available() else "cpu")
         else:
             return torch.device(value)
 

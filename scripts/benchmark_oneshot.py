@@ -36,6 +36,7 @@ from rl_sahi.inference.rollout import rollout_one_slice
 from rl_sahi.rl.checkpoint import load_policy
 from rl_sahi.rl.slice_env import SliceEnv
 from rl_sahi.rl.state_config import StateConfig
+from rl_sahi.common.boxes import iou_matrix
 
 ROOT = Path(__file__).resolve().parent.parent
 ap = argparse.ArgumentParser()
@@ -48,6 +49,9 @@ ap.add_argument("--slice", type=int, default=640)
 ap.add_argument("--max-fine", type=int, default=8, help="so lat RL toi da")
 ap.add_argument("--max-attempts", type=int, default=14)
 ap.add_argument("--chunk", type=int, default=16, help="batch size khi gom crop (T4: 16 ok, 4GB local: 6)")
+ap.add_argument("--gate", choices=["fast", "merge"], default="fast",
+                help="fast: cong novelty IoU vecto hoa (re) | merge: re-NMS day du nhu cu (cham)")
+ap.add_argument("--no-env-cache", action="store_true", help="tat cache phan tinh cua SliceEnv (de doi chieu)")
 ap.add_argument("--with-seq", action="store_true", help="chay them RL-HYBRID tuan tu cu de doi chieu cung run")
 ap.add_argument("--device", default="cuda")
 args = ap.parse_args()
@@ -84,15 +88,46 @@ def is_rejected(info):
     return bool(info.get("stop_due_to_old_overlap") or info.get("stop_due_to_attempted_overlap") or
                 (icfg.require_stop_for_acceptance and (info.get("stop_due_to_max_steps") or info.get("stop_due_to_stalled_roi"))))
 
+# --- STATIC-CACHE cho SliceEnv: phan tinh (detection_map, feature, objectness, spatial...)
+#     chi phu thuoc `det` — dung lai giua cac attempt thay vi tinh lai 14 lan/anh ---
+_ENV_STATIC = ("detection", "hard_regions", "env_cfg", "state_cfg", "target_classes", "class_mapping",
+               "image_shape", "det_boxes", "det_scores", "det_classes", "detection_map", "feature_state",
+               "objectness_state", "spatial_feature_state", "hard_boxes", "box_device", "hard_boxes_t",
+               "high_conf_det_boxes_t")
+
+def clone_env(base, previous_rois, overlap_rois):
+    """Dung env moi tu env goc: share phan TINH, chi tinh lai phan DONG (roi/history/slice maps)."""
+    e = object.__new__(SliceEnv)
+    for k in _ENV_STATIC:
+        setattr(e, k, getattr(base, k))
+    e.previous_rois = np.asarray(previous_rois, dtype=np.float32).reshape(-1, 4)
+    e.overlap_rois = np.asarray(overlap_rois, dtype=np.float32).reshape(-1, 4)
+    e.previous_rois_t = e._box_tensor(e.previous_rois)
+    e.overlap_rois_t = e._box_tensor(e.overlap_rois)
+    e.attempted_slice_map = e._build_slice_map(e.previous_rois)
+    e.accepted_slice_map = e._build_slice_map(e.overlap_rois)
+    e.previous_slice_map = e.attempted_slice_map
+    e.previous_covered = e._init_previous_covered(None)
+    e.history = np.zeros((e.state_cfg.grid_size, e.state_cfg.grid_size), dtype=np.float32)
+    e.covered = e.previous_covered.copy()
+    e.roi = e._initial_roi()
+    e.step_index = 0
+    return e
+
 def select_rois_oneshot(det):
     """Agent chon lat KHONG cham YOLO: kept ROIs dong vai 'accepted' cho luat chong trung."""
     kept, att = [], []
+    base_env = None
     for _ in range(int(args.max_attempts)):
         if len(kept) >= env_cfg.max_slices: break
         hist = np.stack(att).astype("f4") if att else np.zeros((0, 4), "f4")
         ov = np.stack(kept).astype("f4") if kept else np.zeros((0, 4), "f4")
-        env = SliceEnv(det, None, env_cfg=env_cfg, state_cfg=state_cfg, previous_rois=hist,
-                       overlap_rois=ov, target_classes=tc, class_mapping=cm)
+        if base_env is None or args.no_env_cache:
+            env = SliceEnv(det, None, env_cfg=env_cfg, state_cfg=state_cfg, previous_rois=hist,
+                           overlap_rois=ov, target_classes=tc, class_mapping=cm)
+            base_env = env
+        else:
+            env = clone_env(base_env, hist, ov)
         roi, _a, info = rollout_one_slice(policy, env, dt)
         att.append(roi)
         if is_rejected(info):
@@ -100,6 +135,20 @@ def select_rois_oneshot(det):
             continue
         kept.append(roi)
     return kept
+
+def fast_gate(cand_b, cand_s, cand_c, existing_b, existing_c):
+    """Cong novelty CLASS-AWARE vecto hoa: box moi = khong co box CUNG LOP da co IoU>=0.5.
+    Khop ngu nghia merge-NMS theo lop (class_aware_nms) ma chi phi ~0 (khong re-NMS)."""
+    if len(cand_b) == 0: return 0, 0.0
+    cand_b = np.asarray(cand_b, "f4"); cand_c = np.asarray(cand_c).reshape(-1)
+    if len(existing_b) == 0:
+        novel = np.ones(len(cand_b), dtype=bool)
+    else:
+        iou = iou_matrix(cand_b, np.asarray(existing_b, "f4"))           # (n_cand, n_exist)
+        same = cand_c[:, None] == np.asarray(existing_c).reshape(1, -1)  # cung lop
+        dup = ((iou >= 0.5) & same).any(axis=1)
+        novel = ~dup
+    return int(novel.sum()), float(np.clip(np.asarray(cand_s)[novel], 0, 1).sum())
 
 def batch_crops(img, rois):
     """1 chuyen batch cho toan bo crop, chunk theo VRAM."""
@@ -156,15 +205,27 @@ for _idx, img in enumerate(images):
     all_rois = fine + coarse
     outs = batch_crops(img, all_rois) if all_rois else []
     t_bat = nw(); oBat += t_bat - t_sel
-    # cong gain/utility loc SAU cho lat RL (numpy, gan nhu mien phi)
+    # cong gain/utility loc SAU cho lat RL
     xb, xs, xc = [], [], []
-    for (b, s, c) in outs[:len(fine)]:
-        c = cm.map_model_classes(c); b, s, c = _filter_classes(b, s, c, tc)
-        g = _new_detection_gain(fb, fs, fc, xb, xs, xc, b, s, c, det.image_shape, 0.5, 0.5)
-        u = _new_detection_utility(fb, fs, fc, xb, xs, xc, b, s, c, det.image_shape, 0.5, 0.5)
-        if g < 1 or u < 0.2:
-            ogate_drop += 1; continue
-        xb.append(b); xs.append(s); xc.append(c)
+    if args.gate == "fast":
+        ex_b = fb.copy() if len(fb) else np.zeros((0, 4), "f4")
+        ex_c = fc.copy() if len(fc) else np.zeros((0,), "f4")
+        for (b, s, c) in outs[:len(fine)]:
+            c = cm.map_model_classes(c); b, s, c = _filter_classes(b, s, c, tc)
+            g, u = fast_gate(b, s, c, ex_b, ex_c)
+            if g < 1 or u < 0.2:
+                ogate_drop += 1; continue
+            xb.append(b); xs.append(s); xc.append(c)
+            if len(b):
+                ex_b = np.concatenate([ex_b, b], axis=0); ex_c = np.concatenate([ex_c, c], axis=0)
+    else:
+        for (b, s, c) in outs[:len(fine)]:
+            c = cm.map_model_classes(c); b, s, c = _filter_classes(b, s, c, tc)
+            g = _new_detection_gain(fb, fs, fc, xb, xs, xc, b, s, c, det.image_shape, 0.5, 0.5)
+            u = _new_detection_utility(fb, fs, fc, xb, xs, xc, b, s, c, det.image_shape, 0.5, 0.5)
+            if g < 1 or u < 0.2:
+                ogate_drop += 1; continue
+            xb.append(b); xs.append(s); xc.append(c)
     pb, ps, pc = [fb, *xb], [fs, *xs], [fc, *xc]
     for (b, s, c) in outs[len(fine):]:
         c = cm.map_model_classes(c); b, s, c = _filter_classes(b, s, c, tc)

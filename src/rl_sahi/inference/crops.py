@@ -119,6 +119,9 @@ def run_yolo_on_crops(
     )
     
     # Duyệt qua từng kết quả dự đoán và khôi phục tọa độ tương đối của lát cắt về tọa độ tuyệt đối ảnh gốc
+    from rl_sahi.common.data import read_image_shape
+    _shape_cache: dict[str, tuple[int, int]] = {}
+    EDGE_MARGIN = 2.0  # px: box cham bien TRONG cua crop trong khoang nay => coi la bi cat cut
     for output_index, offset, result in zip(output_indices, offsets, results):
         if result.boxes is None or len(result.boxes) == 0:
             continue
@@ -126,11 +129,35 @@ def run_yolo_on_crops(
         # Cộng thêm offset của lát cắt để khôi phục về tọa độ ảnh gốc
         boxes[:, [0, 2]] += offset[0]  # Tọa độ x
         boxes[:, [1, 3]] += offset[1]  # Tọa độ y
-        
+
         scores = result.boxes.conf.detach().cpu().numpy().astype(np.float32)
         classes = result.boxes.cls.detach().cpu().numpy().astype(np.float32)
-        
+
+        # --- FIX (audit MAJOR merge.py:207): loc box CAT CUT o bien TRONG cua lat cat ---
+        # Vat the bi crop cat ngang tao box cut o bien lat; box nay khong khop box day du
+        # (khac hinh) nen lot qua NMS -> thoi phong FP. Chi loc bien KHONG phai bien anh
+        # (bien anh thi vat that su ket thuc o do). Vat o bien trong da duoc lat chong lan /
+        # full-image bat tron ven -> bo manh cut la an toan (chuan SAHI).
+        try:
+            ch, cw = int(result.orig_shape[0]), int(result.orig_shape[1])
+            ip = str(image_paths[output_index])
+            if ip not in _shape_cache:
+                _shape_cache[ip] = read_image_shape(Path(ip))
+            H, W = _shape_cache[ip]
+            x1c, y1c = float(offset[0]), float(offset[1])
+            x2c, y2c = x1c + cw, y1c + ch
+            truncated = (
+                ((x1c > 0.5) & (boxes[:, 0] <= x1c + EDGE_MARGIN)) |
+                ((y1c > 0.5) & (boxes[:, 1] <= y1c + EDGE_MARGIN)) |
+                ((x2c < W - 0.5) & (boxes[:, 2] >= x2c - EDGE_MARGIN)) |
+                ((y2c < H - 0.5) & (boxes[:, 3] >= y2c - EDGE_MARGIN))
+            )
+            keep = ~truncated
+            boxes, scores, classes = boxes[keep], scores[keep], classes[keep]
+        except Exception:
+            pass  # bat ky loi hinh hoc/shape nao -> giu nguyen (an toan, khong lam hong pipeline)
+
         outputs[output_index] = (boxes, scores, classes)
-        
+
     return outputs
 

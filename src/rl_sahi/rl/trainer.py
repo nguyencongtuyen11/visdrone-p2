@@ -172,10 +172,18 @@ def _terminal_reward_with_crop_outcome(
 
     if hard_new_hits > 0:
         hard_reward = float(cfg.hard_hit_reward) * float(hard_new_hits)
-        rejected_penalty = 0.0 if outcome.accepted else float(cfg.rejected_crop_penalty)
-        return float(base_reward + hard_reward + crop_reward - rejected_penalty)
+        if outcome.accepted:
+            return float(base_reward + hard_reward + crop_reward)
+        # FIX farm (audit MAJOR batched_trainer:577): lat BI REJECT khong duoc an FULL hard_hit_reward
+        # — vi `covered` chi commit khi accepted, nen cung hard-box se bi farm lai qua nhieu attempt.
+        # Chi giu 1/4 lam shaping cho lan cham dau + van phat reject.
+        return float(min(base_reward, 0.0) + 0.25 * hard_reward + negative_crop_reward - float(cfg.rejected_crop_penalty))
     if outcome.accepted:
-        return float(min(base_reward, 0.0) + negative_crop_reward - float(cfg.accepted_no_hard_penalty))
+        # FIX (audit MAJOR trainer:178): crop DUOC CHAP NHAN + bat TP THAT (doi chieu GT qua tp_gain)
+        # thi GIU crop_reward DUONG (gom tp_reward*tp_gain) — khong nuot bang min(.,0) nhu cu.
+        # Chi phat accepted_no_hard khi khong co TP moi nao (tp_gain == 0).
+        penalty = 0.0 if int(outcome.tp_gain) > 0 else float(cfg.accepted_no_hard_penalty)
+        return float(min(base_reward, 0.0) + crop_reward - penalty)
     return float(min(base_reward, 0.0) + negative_crop_reward - float(cfg.rejected_crop_penalty))
 
 

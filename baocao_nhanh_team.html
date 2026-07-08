@@ -1,0 +1,142 @@
+<title>Báo cáo nhanh — Khác biệt các phương pháp</title>
+<style>
+  :root{
+    --paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;--hair:#e3e7ec;--line:#b7bfca;
+    --accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;--hero:#0d8f8312;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;--hair:#242c38;--line:#38424f;
+      --accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf16;}
+  }
+  :root[data-theme="light"]{--paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;--hair:#e3e7ec;--line:#b7bfca;--accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;--hero:#0d8f8312;}
+  :root[data-theme="dark"]{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;--hair:#242c38;--line:#38424f;--accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf16;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto;padding:clamp(20px,4vw,48px) clamp(14px,4vw,36px)}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 9px}
+  h1{font-size:clamp(22px,4vw,32px);line-height:1.14;margin:0 0 10px;font-weight:760;letter-spacing:-.01em;text-wrap:balance}
+  .lead{color:var(--muted);font-size:15px;margin:0;max-width:66ch}
+  .meta{color:var(--muted);font-size:12px;font-family:var(--mono);margin-top:10px}
+  section{margin-top:clamp(26px,4vw,40px)}
+  h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 16px;padding-bottom:8px;border-bottom:1px solid var(--hair)}
+
+  .tablecard{overflow-x:auto;border:1px solid var(--hair);border-radius:13px;background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:720px}
+  thead th{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:13px 12px;border-bottom:1px solid var(--hair);text-align:right;white-space:nowrap}
+  thead th.l{text-align:left}
+  tbody td{padding:12px;border-bottom:1px solid var(--hair);font-size:13.5px;text-align:right;font-family:var(--mono)}
+  tbody td.name{text-align:left;font-family:var(--sans);font-weight:700;white-space:nowrap}
+  tbody td.diff{text-align:left;font-family:var(--sans);font-size:13px;color:var(--muted);font-weight:400;min-width:230px}
+  tbody tr:last-child td{border-bottom:none}
+  tr.hero td{background:var(--hero)}
+  tr.base td{color:var(--muted)}
+  .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:1px 7px;margin-left:6px;text-transform:uppercase}
+  .best{color:var(--accent);font-weight:700}
+  b.k{color:var(--ink)}
+
+  .deltas{display:grid;gap:11px}
+  @media(min-width:640px){.deltas{grid-template-columns:1fr 1fr}}
+  .d{border:1px solid var(--hair);border-radius:11px;background:var(--surface);padding:14px 16px;border-left:3px solid var(--accent)}
+  .d.warn{border-left-color:var(--warn)}
+  .d .path{font-family:var(--mono);font-size:11.5px;color:var(--accent);font-weight:700;margin-bottom:5px}
+  .d.warn .path{color:var(--warn)}
+  .d h3{margin:0 0 4px;font-size:14.5px;font-weight:700}
+  .d p{margin:0;font-size:13px;color:var(--muted)}
+  .d p b{color:var(--ink)}
+
+  .verdict{border:1px solid var(--hair);border-left:3px solid var(--accent);border-radius:10px;background:var(--surface);padding:14px 16px;font-size:14.5px}
+  .verdict b{color:var(--ink)}
+  .foot{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Báo cáo nhanh cho team</p>
+  <h1>Các phương pháp khác nhau ở đâu — và số nói gì</h1>
+  <p class="lead">Mỗi method chỉ đổi <b>một thứ cốt lõi</b> so với cái trước. Bảng dưới cho thấy thay đổi đó dẫn tới số liệu thế nào.</p>
+  <p class="meta">VisDrone test-dev 1610 ảnh · Tesla T4 · YOLO11s fine-tune @640 · recall = vật nhỏ · mAP@0.5</p>
+
+  <section>
+    <h2>Bảng nhanh — khác biệt + thông số</h2>
+    <div class="tablecard">
+      <table>
+        <thead>
+          <tr>
+            <th class="l">Phương pháp</th>
+            <th class="l">Điểm khác cốt lõi</th>
+            <th>Crop</th><th>mAP</th><th>Recall</th><th>ms</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="base">
+            <td class="name">YOLO full@640</td>
+            <td class="diff">Không cắt lát — chạy cả ảnh 1 lượt</td>
+            <td>1.0</td><td>0.270</td><td>0.217</td><td>56</td>
+          </tr>
+          <tr>
+            <td class="name">RL one-shot</td>
+            <td class="diff">Chọn vùng <b class="k">1 phát</b> từ đỉnh objectness (bỏ rê)</td>
+            <td>3.6</td><td>0.295</td><td>0.346</td><td class="best">154</td>
+          </tr>
+          <tr>
+            <td class="name">STATIC keep-all</td>
+            <td class="diff">Giữ hết K vùng, <b class="k">không RL</b> (baseline)</td>
+            <td>9.0</td><td>0.299</td><td>0.394</td><td>205</td>
+          </tr>
+          <tr>
+            <td class="name">SAHI</td>
+            <td class="diff">Cắt lưới cố định <b class="k">vét cạn</b></td>
+            <td>27.6</td><td>0.303</td><td>0.457</td><td>542</td>
+          </tr>
+          <tr class="hero">
+            <td class="name">RL di chuyển (batched)<span class="badge">★ tốt nhất</span></td>
+            <td class="diff">Agent <b class="k">rê ROI tìm cụm</b> + lưới thô, YOLO batch 1 lượt</td>
+            <td>16.6</td><td class="best">0.357</td><td class="best">0.497</td><td>496</td>
+          </tr>
+          <tr class="base">
+            <td class="name">RL di chuyển (tuần tự)</td>
+            <td class="diff">Như trên nhưng YOLO chạy <b class="k">trong vòng lặp</b></td>
+            <td>15.7</td><td>0.356</td><td>0.500</td><td>1370</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">Ô xanh = tốt nhất cột. Recall & mAP: cao hơn tốt. Crop, ms: thấp hơn tốt.</p>
+  </section>
+
+  <section>
+    <h2>4 thay đổi quan trọng — và hệ quả</h2>
+    <div class="deltas">
+      <div class="d">
+        <div class="path">full → SAHI</div>
+        <h3>Thêm cắt lát (vét cạn)</h3>
+        <p>Recall <b>.217 → .457</b> — bắt được nhiều vật nhỏ hơn hẳn. Nhưng đổi lại <b>27.6 crop</b>, FP cao, chậm 542ms.</p>
+      </div>
+      <div class="d">
+        <div class="path">SAHI → RL one-shot</div>
+        <h3>RL chọn vùng 1 phát (thay lưới)</h3>
+        <p>Crop <b>27.6 → 3.6</b> (ít 8×), FP giảm nửa, nhanh 3.5×. Cái giá: recall xuống .346 (chọn thưa hơn).</p>
+      </div>
+      <div class="d">
+        <div class="path">one-shot → RL di chuyển</div>
+        <h3>Rê ROI tìm cụm vật (rollout)</h3>
+        <p>Agent luồn hộp vào cụm vật nhỏ dày → mAP <b>.357</b> & recall <b>.497</b> — <b>cao nhất, vượt cả SAHI</b>.</p>
+      </div>
+      <div class="d warn">
+        <div class="path">tuần tự → batched</div>
+        <h3>Dời YOLO ra ngoài vòng lặp</h3>
+        <p>Chỉ đổi thời điểm gọi YOLO (gộp 1 lượt): <b>1370ms → 496ms</b> (nhanh 2.8×), chất lượng <b>giữ nguyên</b>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Chốt cho team</h2>
+    <div class="verdict">
+      <b>Bản đề xuất = RL di chuyển (batched).</b> Nó <b>vượt SAHI cả mAP (.357 &gt; .303) lẫn recall (.497 &gt; .457)</b>, ít FP hơn, ít crop hơn 40%, ở tốc độ ngang SAHI (496 vs 542ms). <b>One-shot</b> là biến thể nhẹ/nhanh nhất (154ms) khi cần ưu tiên tốc độ. <b>YOLO full</b> nhanh nhất nhưng bỏ sót nhiều vật nhỏ nhất.
+    </div>
+    <p class="foot">Đơn vị: recall vật nhỏ (GT ≤ percentile-40) và mAP@0.5, giao thức VisDrone 10 lớp. Không so trực tiếp với AP@0.5:0.95 của paper SOTA (khác thước đo).</p>
+  </section>
+</div>

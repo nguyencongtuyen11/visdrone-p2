@@ -47,6 +47,8 @@ ap.add_argument("--max-attempts", type=int, default=14)
 ap.add_argument("--chunk", type=int, default=16)
 ap.add_argument("--device", default="cuda")
 ap.add_argument("--out", type=Path, default=ROOT / "runs" / "viz")
+ap.add_argument("--out-width", type=int, default=0, help="neu >0: thu nho anh ghep ve chieu rong nay (tiet kiem dia khi chay ca bo test)")
+ap.add_argument("--jpg-quality", type=int, default=90, help="chat luong JPEG 1-100")
 args = ap.parse_args()
 
 BASE, SLI, dev = args.base, args.slice, args.device
@@ -191,8 +193,11 @@ for _idx, img in enumerate(images):
     # ---------- ghep ngang ----------
     sep = np.full((H, max(4, W // 300), 3), 255, np.uint8)
     combo = np.hstack([im_os, sep, im_mv])
-    out_path = args.out / f"{_idx:02d}_{img.stem}_cmp.jpg"
-    cv2.imwrite(str(out_path), combo)
+    if args.out_width and combo.shape[1] > args.out_width:
+        sc = args.out_width / combo.shape[1]
+        combo = cv2.resize(combo, (args.out_width, int(round(combo.shape[0] * sc))), interpolation=cv2.INTER_AREA)
+    out_path = args.out / f"{_idx:04d}_{img.stem}_cmp.jpg"
+    cv2.imwrite(str(out_path), combo, [cv2.IMWRITE_JPEG_QUALITY, int(args.jpg_quality)])
     print(f"[viz] {out_path.name}: one-shot giu {len(kept)}/{len(regions)}"
           + (f", di-chuyen {len(rois_mv)} ROI" if policy_mv is not None else ", (thieu ban di chuyen)"), flush=True)
 

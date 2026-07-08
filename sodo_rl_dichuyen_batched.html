@@ -1,0 +1,226 @@
+<title>RL di chuyển batched — cơ chế 2 vòng lặp</title>
+<style>
+  :root{
+    --paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;--hair:#e3e7ec;--line:#b7bfca;
+    --accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;--hero:#0d8f830d;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;--hair:#242c38;--line:#38424f;
+      --accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf12;}
+  }
+  :root[data-theme="light"]{--paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;--hair:#e3e7ec;--line:#b7bfca;--accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;--hero:#0d8f830d;}
+  :root[data-theme="dark"]{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;--hair:#242c38;--line:#38424f;--accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf12;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,40px)}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 10px}
+  h1{font-size:clamp(23px,4.3vw,35px);line-height:1.13;margin:0 0 12px;font-weight:760;letter-spacing:-.01em;text-wrap:balance}
+  .lead{color:var(--muted);font-size:15.5px;margin:0;max-width:70ch}
+  .meta{color:var(--muted);font-size:12.5px;font-family:var(--mono);margin-top:12px}
+  section{margin-top:clamp(30px,5vw,46px)}
+  h2{font-size:13px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 18px;padding-bottom:9px;border-bottom:1px solid var(--hair)}
+  h2 .n{color:var(--accent);margin-right:8px}
+  p{font-size:14.5px;margin:0 0 12px}b{color:var(--ink)}
+
+  .diagram{display:flex;justify-content:center;border:1px solid var(--hair);border-radius:14px;background:var(--surface);padding:clamp(10px,2.5vw,20px)}
+  .diagram svg{width:100%;max-width:520px;height:auto}
+  .caption{text-align:center;font-size:12.5px;color:var(--muted);margin-top:10px}
+
+  ol.steps{margin:0;padding:0;counter-reset:s;list-style:none}
+  ol.steps li{position:relative;padding:0 0 16px 46px;border-left:2px solid var(--hair);margin-left:15px}
+  ol.steps li:last-child{border-left-color:transparent;padding-bottom:0}
+  ol.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:-15px;top:-3px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  ol.steps h3{margin:0 0 3px;font-size:15px;font-weight:700}
+  ol.steps p{margin:0;font-size:13.5px;color:var(--muted)}
+  ol.steps code{font-family:var(--mono);font-size:12px;background:var(--accent-soft);padding:1px 5px;border-radius:4px;color:var(--ink)}
+
+  .tablecard{overflow-x:auto;border:1px solid var(--hair);border-radius:12px;background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:460px}
+  th,td{padding:11px 14px;border-bottom:1px solid var(--hair);text-align:left;font-size:13.5px}
+  th{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  td.k{font-family:var(--mono);font-size:12.5px;color:var(--muted);white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  td b{color:var(--ink)}
+
+  .cmp{display:grid;gap:14px}
+  @media(min-width:680px){.cmp{grid-template-columns:1fr 1fr}}
+  .col{border:1px solid var(--hair);border-radius:12px;background:var(--surface);padding:16px}
+  .col.bad{border-top:3px solid var(--warn)}
+  .col.good{border-top:3px solid var(--accent)}
+  .col h3{margin:0 0 4px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .col .tag{font-size:11px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:20px}
+  .col.bad .tag{background:var(--warn-soft);color:var(--warn)}
+  .col.good .tag{background:var(--accent-soft);color:var(--accent)}
+  .col p{font-size:13px;color:var(--muted);margin:8px 0 12px}
+  .strip{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-bottom:10px}
+  .chip{font-size:11px;font-family:var(--mono);border:1px solid var(--line);border-radius:7px;padding:5px 7px;white-space:nowrap;background:var(--paper)}
+  .chip.y{border-color:var(--warn);color:var(--warn);font-weight:700;background:var(--warn-soft)}
+  .chip.a{border-color:var(--accent);color:var(--accent);font-weight:700;background:var(--accent-soft)}
+  .arr{color:var(--muted);font-size:12px}
+  .total{font-family:var(--mono);font-size:14px;font-weight:700;margin-top:6px}
+  .total.bad{color:var(--warn)}.total.good{color:var(--accent)}
+
+  .bars{display:grid;gap:9px;margin-top:6px}
+  .bar{display:grid;grid-template-columns:130px 1fr;align-items:center;gap:12px;font-size:12.5px}
+  .bar .lab{color:var(--muted);font-family:var(--mono);text-align:right}
+  .bar .track{height:22px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff;font-family:var(--mono);font-size:11.5px;font-weight:700;min-width:40px}
+  .bar .track.warn{background:var(--warn)}
+  .bar .track.dim{background:var(--muted)}
+
+  .verdict{border:1px solid var(--hair);border-left:3px solid var(--accent);border-radius:10px;background:var(--surface);padding:14px 16px;font-size:14px}
+  .verdict b{color:var(--ink)}
+  svg text{font-family:var(--sans)}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Cơ chế phương pháp · Giải thích</p>
+  <h1>RL di chuyển (batched) — cơ chế 2 vòng lặp</h1>
+  <p class="lead">Cách agent RL rê ROI để chọn vùng cắt, và vì sao chỉ cần <b>tách YOLO ra khỏi vòng lặp</b> là nhanh gấp gần 3 lần mà kết quả không đổi.</p>
+  <p class="meta">RL-SAHI rollout (Dueling Double DQN) · VisDrone · Tesla T4 · checkpoint 05/07</p>
+
+  <section>
+    <h2><span class="n">◆</span>Sơ đồ 2 vòng lặp</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 560 772" xmlns="http://www.w3.org/2000/svg" role="img">
+        <title>Sơ đồ 2 vòng lặp RL di chuyển batched</title>
+        <desc>Vòng ngoài lặp ≤14 lần giữ ≤8 lát; mỗi lần chạy vòng trong rollout ≤10 bước; sau đó gom lát với lưới thô rồi YOLO batch 1 lượt.</desc>
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/>
+          </marker>
+        </defs>
+        <style>
+          .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+          .t{fill:var(--ink);font-size:13.5px;font-weight:650}
+          .s{fill:var(--muted);font-size:10.5px}
+          .lb{fill:none;stroke:var(--line);stroke-width:1.4;stroke-dasharray:5 4}
+          .ll{fill:var(--accent);font-size:11px;font-weight:700}
+          .fl{fill:none;stroke:var(--muted);stroke-width:1.6}
+          .sm{fill:var(--muted);font-size:10px;font-style:italic}
+          .ac{stroke:var(--accent);stroke-width:2.4}
+          .at{fill:var(--accent);font-weight:750}
+        </style>
+        <rect class="bx" x="100" y="18" width="360" height="46" rx="10"/>
+        <text class="t" x="280" y="38" text-anchor="middle">① YOLO 1 lượt → detection cache</text>
+        <text class="s" x="280" y="54" text-anchor="middle">feature / objectness map · phần TĨNH, 1 lần</text>
+        <line class="fl" x1="280" y1="64" x2="280" y2="84" marker-end="url(#ah)"/>
+        <rect class="lb" x="60" y="86" width="440" height="446" rx="12"/>
+        <text class="ll" x="76" y="106">VÒNG NGOÀI · lặp ≤14 lần · giữ ≤8 lát</text>
+        <rect class="bx" x="150" y="120" width="260" height="42" rx="10"/>
+        <text class="t" x="280" y="139" text-anchor="middle">clone_env</text>
+        <text class="s" x="280" y="153" text-anchor="middle">dựng env, dùng lại phần tĩnh</text>
+        <line class="fl" x1="280" y1="162" x2="280" y2="182" marker-end="url(#ah)"/>
+        <rect class="lb" x="95" y="184" width="370" height="150" rx="12"/>
+        <text class="ll" x="111" y="204">VÒNG TRONG · rollout (rê ROI)</text>
+        <rect class="bx" x="140" y="216" width="280" height="56" rx="10"/>
+        <text class="t" x="280" y="238" text-anchor="middle">rê ROI: Q-net → 1 trong 11 action</text>
+        <text class="s" x="280" y="254" text-anchor="middle">8 hướng · zoom in/out · STOP</text>
+        <path class="fl" d="M140,258 C112,258 112,224 140,224" marker-end="url(#ah)"/>
+        <text class="ll" x="128" y="300" text-anchor="middle">↺ ≤10 bước, tới khi STOP → 1 ROI</text>
+        <line class="fl" x1="280" y1="334" x2="280" y2="352" marker-end="url(#ah)"/>
+        <rect class="bx" x="150" y="354" width="260" height="52" rx="10"/>
+        <text class="t" x="280" y="376" text-anchor="middle">Gate → giữ / bỏ lát</text>
+        <text class="s" x="280" y="392" text-anchor="middle">gain≥1 · utility≥0.2 · không chồng lấn</text>
+        <path class="fl" d="M410,380 C468,380 468,141 412,141" marker-end="url(#ah)"/>
+        <text class="ll" x="484" y="262" text-anchor="middle" transform="rotate(90 484 262)">chưa đủ 8 &amp; còn lần thử</text>
+        <line class="fl" x1="280" y1="406" x2="280" y2="552" marker-end="url(#ah)"/>
+        <text class="sm" x="292" y="472" text-anchor="start">đủ 8 lát HOẶC</text>
+        <text class="sm" x="292" y="486" text-anchor="start">hết 14 lần</text>
+        <rect class="bx" x="100" y="554" width="360" height="46" rx="10"/>
+        <text class="t" x="280" y="574" text-anchor="middle">② Gom: ≤8 lát RL + ~8 ô lưới thô</text>
+        <text class="s" x="280" y="590" text-anchor="middle">= 16.6 crop / ảnh</text>
+        <line class="fl" x1="280" y1="600" x2="280" y2="620" marker-end="url(#ah)"/>
+        <rect class="bx ac" x="100" y="622" width="360" height="48" rx="10"/>
+        <text class="t at" x="280" y="642" text-anchor="middle">③ BATCH YOLO — chạy 1 lượt</text>
+        <text class="s" x="280" y="658" text-anchor="middle">YOLO CHỈ chạy ở đây</text>
+        <line class="fl" x1="280" y1="670" x2="280" y2="690" marker-end="url(#ah)"/>
+        <rect class="bx" x="100" y="692" width="360" height="44" rx="10"/>
+        <text class="t" x="280" y="719" text-anchor="middle">④ Merge NMS → kết quả</text>
+        <rect x="100" y="750" width="14" height="14" rx="3" class="ac" fill="none"/>
+        <text class="s" x="120" y="761">= nơi YOLO chạy (tách khỏi rollout → mới batch được)</text>
+      </svg>
+    </div>
+    <p class="caption">Hai vòng lặp lồng nhau chỉ dùng Q-net trên cache (rẻ); YOLO bị dồn ra ô cam chạy 1 lượt.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">01</span>Giải thích từng bước</h2>
+    <ol class="steps">
+      <li><h3>Chuẩn bị (1 lần/ảnh)</h3><p>YOLO chạy full 1 lượt → <b>detection cache</b>: box thô + heatmap objectness/feature. Đây là phần <b>tĩnh</b>, không đổi trong suốt quá trình chọn lát.</p></li>
+      <li><h3>Vòng ngoài — thu thập lát</h3><p>Lặp tối đa <b>14 lần thử</b>, giữ tối đa <b>8 lát</b>. Mỗi lần dựng 1 <code>SliceEnv</code> qua <code>clone_env</code> (dùng lại phần tĩnh nên rẻ), truyền vào các lát đã-thử và đã-giữ để agent tránh chọn trùng.</p></li>
+      <li><h3>Vòng trong — rollout (rê ROI)</h3><p>Agent bắt đầu từ ROI khởi tạo (28% ảnh). Mỗi bước: Q-net chấm điểm <b>11 hành động</b> (8 hướng · zoom in/out · STOP), chặn action ra biên, chọn điểm cao nhất, <code>env.step()</code> rê/zoom ROI. Lặp <b>≤10 bước</b> tới khi STOP → ra <b>1 ROI ứng viên</b>.</p></li>
+      <li><h3>Gate — giữ hay bỏ</h3><p>Lát mới phải: bắt thêm ≥1 vật (<code>gain≥1</code>), đủ hữu ích (<code>utility≥0.2</code>), và <b>không chồng lấn</b> lát đã giữ. Đạt thì giữ; không thì bỏ, quay lại thử lần tiếp.</p></li>
+      <li><h3>Kết thúc vòng ngoài</h3><p>Dừng khi <b>giữ đủ 8 lát</b> hoặc <b>hết 14 lần thử</b>.</p></li>
+      <li><h3>Gom crop (hybrid)</h3><p><b>≤8 lát RL</b> (rê tới cụm vật nhỏ dày) + <b>lưới thô</b> <code>0.6/0.15</code> (~8 ô phủ nền) = <b>16.6 crop/ảnh</b>.</p></li>
+      <li><h3>Batch YOLO — 1 lượt</h3><p>Gom <b>toàn bộ</b> crop chạy YOLO <b>một lượt</b> (chunk theo VRAM). Đây là điểm mấu chốt của "batched".</p></li>
+      <li><h3>Merge NMS</h3><p>Gộp full + tất cả crop bằng class-aware NMS → kết quả cuối.</p></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="n">02</span>Cấu hình chính</h2>
+    <div class="tablecard">
+      <table>
+        <tr><td class="k">max_slices</td><td><b>8</b> — số lát RL giữ tối đa</td><td class="k">output_conf</td><td>0.10</td></tr>
+        <tr><td class="k">max_attempts</td><td><b>14</b> — số lần thử rollout</td><td class="k">merge_iou</td><td>0.50</td></tr>
+        <tr><td class="k">max_steps</td><td>~<b>10</b> — số bước rê mỗi lát</td><td class="k">gate</td><td>gain≥1 · utility≥0.2</td></tr>
+        <tr><td class="k">action</td><td><b>11</b> — 8 hướng · zoom± · STOP</td><td class="k">lưới thô</td><td>frac 0.6 · overlap 0.15</td></tr>
+        <tr><td class="k">move / zoom</td><td>0.30 / 0.75</td><td class="k">ROI</td><td>10–35% ảnh</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">03</span>So sánh: KHÔNG batch vs CÓ batch</h2>
+    <p>Cả hai dùng <b>cùng một policy, cùng chọn ra những lát y hệt</b>. Khác biệt duy nhất: <b>YOLO chạy lúc nào</b>.</p>
+    <div class="cmp">
+      <div class="col bad">
+        <h3>Tuần tự <span class="tag">CŨ</span></h3>
+        <p>YOLO gọi <b>ngay trong vòng lặp</b> — mỗi lát chọn xong chạy YOLO liền (để lấy detection thật cho gate). ~15 lát = ~15 lần gọi YOLO lẻ tẻ, GPU không gộp được.</p>
+        <div class="strip">
+          <span class="chip">rê→<span style="color:var(--warn)">YOLO</span></span><span class="arr">→</span>
+          <span class="chip">rê→<span style="color:var(--warn)">YOLO</span></span><span class="arr">→</span>
+          <span class="chip">rê→<span style="color:var(--warn)">YOLO</span></span><span class="arr">→</span>
+          <span class="chip">…×15</span>
+        </div>
+        <div class="total bad">= 1370 ms</div>
+      </div>
+      <div class="col good">
+        <h3>Batched <span class="tag">MỚI</span></h3>
+        <p>Rollout <b>không gọi YOLO</b> (chỉ dùng luật chồng-lấn trên ROI). Chọn xong hết mới gom crop chạy YOLO <b>1 lượt</b> → GPU chạy song song.</p>
+        <div class="strip">
+          <span class="chip a">rê ×14 (KHÔNG YOLO)</span><span class="arr">→</span>
+          <span class="chip y">YOLO ×1 · 16.6 crop</span>
+        </div>
+        <div class="total good">= 496 ms</div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px" class="bars">
+      <div class="bar"><span class="lab">Tuần tự (cũ)</span><div class="track warn" style="width:100%">1370 ms</div></div>
+      <div class="bar"><span class="lab">SAHI (mốc)</span><div class="track dim" style="width:39.6%">542 ms</div></div>
+      <div class="bar"><span class="lab">Batched (mới)</span><div class="track" style="width:36.2%">496 ms</div></div>
+    </div>
+
+    <div class="tablecard" style="margin-top:18px">
+      <table>
+        <thead><tr><th>Chỉ số</th><th>Tuần tự (cũ)</th><th>Batched (mới)</th></tr></thead>
+        <tbody>
+          <tr><td>YOLO chạy khi nào</td><td><b>trong vòng lặp</b>, ~15 lần lẻ</td><td><b>ngoài vòng lặp</b>, 1 lượt gộp</td></tr>
+          <tr><td>Thời gian rollout/chọn lát</td><td>—</td><td><b>133 ms</b> (cả 14 lần, chỉ Q-net)</td></tr>
+          <tr><td>Thời gian YOLO</td><td>rải rác → chậm</td><td><b>294 ms</b> (batch)</td></tr>
+          <tr><td>Tổng thời gian</td><td><b>1370 ms</b></td><td><b>496 ms</b> (nhanh 2.8×)</td></tr>
+          <tr><td>mAP@0.5</td><td>0.356</td><td>0.357</td></tr>
+          <tr><td>Recall vật nhỏ</td><td>0.500</td><td>0.497</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="verdict" style="margin-top:16px">
+      <b>Chốt:</b> Batch hóa <b>không đổi thuật toán, không đổi policy, không đổi lát nào cả</b> — chỉ đổi <b>thời điểm gọi YOLO</b>. Vì thế chất lượng giữ nguyên (mAP .357 ≈ .356) mà thời gian giảm từ 1370 ms còn <b>496 ms</b> (≈ SAHI 542 ms). Đây chính là lý do "di chuyển" hết chậm.
+    </div>
+  </section>
+</div>

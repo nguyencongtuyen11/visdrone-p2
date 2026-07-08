@@ -1,0 +1,224 @@
+<title>So sánh phương pháp — VisDrone test-1610</title>
+<style>
+  :root{
+    --paper:#f5f7f9; --surface:#ffffff; --ink:#141922; --muted:#5b6472;
+    --hair:#e3e7ec; --accent:#0d8f83; --accent-soft:#0d8f8316; --warn:#c2410c;
+    --hero:#0d8f830f; --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;
+      --hair:#242c38;--accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--hero:#2dd4bf14;}
+  }
+  :root[data-theme="light"]{--paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;
+    --hair:#e3e7ec;--accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--hero:#0d8f830f;}
+  :root[data-theme="dark"]{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;
+    --hair:#242c38;--accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--hero:#2dd4bf14;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+    line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,40px)}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+    font-weight:700;margin:0 0 10px}
+  h1{font-size:clamp(24px,4.5vw,38px);line-height:1.12;margin:0 0 12px;font-weight:760;
+    letter-spacing:-.01em;text-wrap:balance}
+  .sub{color:var(--muted);font-size:15px;margin:0 0 6px;max-width:70ch}
+  .meta{color:var(--muted);font-size:13px;font-family:var(--mono);margin-top:6px}
+  section{margin-top:clamp(30px,5vw,48px)}
+  h2{font-size:13px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);
+    font-weight:700;margin:0 0 16px;padding-bottom:10px;border-bottom:1px solid var(--hair)}
+
+  .tablecard{overflow-x:auto;border:1px solid var(--hair);border-radius:14px;background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:640px}
+  thead th{font-size:12px;font-weight:700;text-align:right;color:var(--muted);padding:14px 14px 12px;
+    border-bottom:1px solid var(--hair);white-space:nowrap;vertical-align:bottom}
+  thead th.name{text-align:left}
+  thead th small{display:block;font-weight:500;font-size:10.5px;letter-spacing:.04em;opacity:.75}
+  tbody td{padding:13px 14px;text-align:right;font-family:var(--mono);font-size:15px;
+    border-bottom:1px solid var(--hair)}
+  tbody td.name{text-align:left;font-family:var(--sans);font-weight:600;font-size:14.5px;white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  tr.hero td{background:var(--hero)}
+  tr.base td{color:var(--muted)}
+  .badge{display:inline-block;font-family:var(--sans);font-size:10.5px;font-weight:700;
+    letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:20px;
+    padding:1px 8px;margin-left:8px;vertical-align:middle;text-transform:uppercase}
+  .best{color:var(--accent);font-weight:700;position:relative}
+  .best::after{content:"●";font-size:7px;position:relative;top:-5px;margin-left:3px}
+  .sub2{font-size:11px;color:var(--muted);font-family:var(--sans)}
+  .dim{color:var(--muted)}
+
+  .chartcard{border:1px solid var(--hair);border-radius:14px;background:var(--surface);
+    padding:clamp(14px,3vw,24px)}
+  .chartcard svg{width:100%;height:auto;display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:16px 22px;margin-top:14px;font-size:12.5px;color:var(--muted)}
+  .legend b{color:var(--ink);font-weight:600}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+
+  .takes{display:grid;gap:12px}
+  .take{border:1px solid var(--hair);border-left:3px solid var(--accent);border-radius:10px;
+    background:var(--surface);padding:14px 16px}
+  .take.win{border-left-color:var(--accent)}
+  .take.warnb{border-left-color:var(--warn)}
+  .take h3{margin:0 0 4px;font-size:15px;font-weight:700}
+  .take p{margin:0;font-size:13.5px;color:var(--muted)}
+  .take b{color:var(--ink)}
+
+  .notes{font-size:12.5px;color:var(--muted);line-height:1.7}
+  .notes p{margin:6px 0}
+  .notes code{font-family:var(--mono);font-size:11.5px;background:var(--accent-soft);
+    padding:1px 5px;border-radius:4px;color:var(--ink)}
+  svg text{font-family:var(--sans)}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Luận văn · RL-SAHI · Đối chiếu</p>
+  <h1>So sánh phương pháp phát hiện vật thể nhỏ</h1>
+  <p class="sub">Toàn bộ phương pháp đã thử — YOLO fine-tune, SAHI, và các biến thể RL — trên cùng một tập test và cùng một detector. Số đo trực tiếp, cùng ngưỡng conf 0.10.</p>
+  <p class="meta">VisDrone2019-DET test-dev · 1610 ảnh · Tesla T4 · YOLO11s fine-tune VisDrone @640 · crop @640</p>
+
+  <section>
+    <h2>Bảng đối chiếu đầy đủ</h2>
+    <div class="tablecard">
+      <table>
+        <thead>
+          <tr>
+            <th class="name">Phương pháp</th>
+            <th>mAP@0.5<small>cao ▲ tốt</small></th>
+            <th>Recall nhỏ<small>cao ▲ tốt</small></th>
+            <th>FP/ảnh<small>thấp ▼ tốt</small></th>
+            <th>Crop/ảnh<small>thấp ▼ tốt</small></th>
+            <th>ms/ảnh<small>thấp ▼ tốt</small></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="base">
+            <td class="name">YOLO fine-tune (full@640)</td>
+            <td>0.270</td><td>0.217</td>
+            <td class="best">33.9</td><td class="best">1.0</td><td class="best">56</td>
+          </tr>
+          <tr>
+            <td class="name">RL-ONESHOT <span class="sub2">(bandit, mới)</span></td>
+            <td>0.295</td><td>0.346</td>
+            <td>45.3</td><td>3.6</td><td>154</td>
+          </tr>
+          <tr>
+            <td class="name">STATIC top-K <span class="sub2">(không RL)</span></td>
+            <td>0.299</td><td>0.394</td>
+            <td>64.1</td><td>9.0</td><td>205</td>
+          </tr>
+          <tr>
+            <td class="name">SAHI <span class="sub2">(lưới cố định)</span></td>
+            <td>0.303</td><td>0.457</td>
+            <td>98.7</td><td>27.6</td><td>542</td>
+          </tr>
+          <tr class="hero">
+            <td class="name">RL-DI CHUYỂN (batched)<span class="badge">★ Đề xuất</span></td>
+            <td class="best">0.357</td><td>0.497</td>
+            <td>91.1</td><td>16.6</td><td>496</td>
+          </tr>
+          <tr>
+            <td class="name">RL-DI CHUYỂN <span class="sub2">(tuần tự)</span></td>
+            <td>0.356</td><td class="best">0.500</td>
+            <td>95.6</td><td>15.7</td><td class="dim">1370</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="notes"><span class="best" style="font-size:0"> </span>● = tốt nhất cột. YOLO full có FP/crop/ms thấp nhất chỉ vì <b>không cắt lát</b> (làm ít nhất) — đổi lại recall thấp nhất.</p>
+  </section>
+
+  <section>
+    <h2>Đường đổi Recall ↔ Tốc độ (Pareto)</h2>
+    <div class="chartcard">
+      <svg viewBox="0 0 720 430" role="img" aria-label="Biểu đồ recall theo thời gian">
+        <!-- grid + axes -->
+        <g stroke="var(--hair)" stroke-width="1">
+          <line x1="70" y1="40" x2="70" y2="400"/>
+          <line x1="70" y1="400" x2="700" y2="400"/>
+          <line x1="70" y1="130" x2="700" y2="130" stroke-dasharray="3 5" opacity="0.6"/>
+          <line x1="70" y1="220" x2="700" y2="220" stroke-dasharray="3 5" opacity="0.6"/>
+          <line x1="70" y1="310" x2="700" y2="310" stroke-dasharray="3 5" opacity="0.6"/>
+        </g>
+        <g fill="var(--muted)" font-size="11" text-anchor="end">
+          <text x="62" y="404">.15</text>
+          <text x="62" y="314">.24</text>
+          <text x="62" y="224">.33</text>
+          <text x="62" y="134">.42</text>
+          <text x="62" y="63">.51</text>
+        </g>
+        <g fill="var(--muted)" font-size="11" text-anchor="middle">
+          <text x="95" y="418">56</text>
+          <text x="293" y="418">500</text>
+          <text x="518" y="418">1000</text>
+          <text x="686" y="418">1370</text>
+        </g>
+        <text x="34" y="220" fill="var(--muted)" font-size="11.5" text-anchor="middle" transform="rotate(-90 34 220)">Recall vật nhỏ</text>
+        <text x="385" y="428" fill="var(--muted)" font-size="0"> </text>
+
+        <!-- frontier line: full -> one-shot -> static -> moving-batched -->
+        <polyline points="95,335 139,209 162,163 293,62" fill="none"
+          stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4" opacity="0.55"/>
+
+        <!-- dominated points (hollow) -->
+        <circle cx="314" cy="101" r="12" fill="none" stroke="var(--muted)" stroke-width="1.6"/>
+        <circle cx="686" cy="60" r="10" fill="none" stroke="var(--muted)" stroke-width="1.6"/>
+
+        <!-- frontier points -->
+        <circle cx="95"  cy="335" r="6"    fill="var(--muted)"/>
+        <circle cx="139" cy="209" r="7.5"  fill="var(--accent)" opacity="0.85"/>
+        <circle cx="162" cy="163" r="9"    fill="var(--accent)" opacity="0.85"/>
+        <circle cx="293" cy="62"  r="11"   fill="var(--accent)"/>
+        <circle cx="293" cy="62"  r="15.5" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+
+        <!-- labels -->
+        <g font-size="11.5" fill="var(--ink)">
+          <text x="95"  y="357" text-anchor="middle">YOLO full</text>
+          <text x="150" y="200">one-shot</text>
+          <text x="173" y="154">static</text>
+          <text x="300" y="45"  font-weight="700" fill="var(--accent)">DI CHUYỂN (batched) ★</text>
+          <text x="326" y="98"  fill="var(--muted)">SAHI · bị lấn</text>
+          <text x="676" y="52"  text-anchor="end" fill="var(--muted)">di chuyển tuần tự · bị lấn</text>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--accent)"></span><b>Trên đường Pareto</b> — không bị lấn</span>
+        <span><span class="dot" style="border:1.6px solid var(--muted);background:transparent"></span><b>Bị lấn</b> — có bản khác vừa nhanh hơn vừa recall cao hơn</span>
+        <span>Bán kính ∝ số crop/ảnh</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Đọc nhanh (trung thực)</h2>
+    <div class="takes">
+      <div class="take win">
+        <h3>RL di chuyển (batched) lấn cả SAHI</h3>
+        <p><b>mAP .357 &gt; SAHI .303</b> và <b>recall .497 &gt; SAHI .457</b>, lại <b>ít FP hơn</b> (91 vs 99) và <b>ít crop hơn 40%</b> (16.6 vs 27.6). Nó vừa tốt hơn vừa gọn hơn SAHI trên mọi mặt.</p>
+      </div>
+      <div class="take win">
+        <h3>Batch hóa trị xong "di chuyển quá chậm"</h3>
+        <p>Rollout tuần tự 1370ms → <b>batch YOLO còn 496ms</b> (≈ SAHI 542ms) mà <b>giữ nguyên chất lượng</b> (.357 vs .356). Mốc chậm cũ chỉ vì chưa gộp crop.</p>
+      </div>
+      <div class="take">
+        <h3>One-shot = điểm nhanh nhất, chất lượng thấp hơn</h3>
+        <p>Nhanh nhất trong nhóm cắt (<b>154ms</b>), FP thấp nhất (45), nhưng recall .346 và mAP .295 <b>thua xa bản di chuyển</b>. Là biến thể nhẹ, không phải bản mạnh nhất.</p>
+      </div>
+      <div class="take warnb">
+        <h3>Lưu ý đơn vị khi so với paper</h3>
+        <p>Đây là <b>recall vật nhỏ</b> và <b>mAP@0.5</b>. Không so trực tiếp với <b>AP@0.5:0.95</b> của SOTA (khác thước đo). Khoảng cách với SOTA chủ yếu do độ phân giải/detector, không phải thuật toán chọn vùng.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ghi chú kỹ thuật</h2>
+    <div class="notes">
+      <p>· <b>Recall nhỏ</b> = tỉ lệ bắt được vật thể có diện tích ≤ percentile-40 (vật nhỏ). <b>mAP@0.5</b> theo giao thức VisDrone 10 lớp.</p>
+      <p>· <b>ms/ảnh</b> đo trên Tesla T4, đã đồng bộ GPU. <code>full@640</code> ở đây gồm cả trích feature nền của pipeline; YOLO thuần ~45ms.</p>
+      <p>· "DI CHUYỂN" = agent RL (Dueling Double DQN) rê ROI từng bước rồi cắt. "batched" = gộp toàn bộ crop chạy YOLO 1 lượt (<code>benchmark_oneshot.py</code>). "one-shot" = chọn vùng 1 phát không rê (<code>benchmark_oneshot_rl.py</code>).</p>
+      <p>· Số tái lập 2 lần (test-400 và test-1610) cho cùng kết luận; bản batched và tuần tự khớp nhau (.357 vs .356) → tin cậy.</p>
+    </div>
+  </section>
+</div>

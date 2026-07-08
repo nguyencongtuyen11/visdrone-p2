@@ -1,0 +1,134 @@
+<title>Báo cáo — One-shot RL trên feature map</title>
+<style>
+  :root{
+    --paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;
+    --hair:#e3e7ec;--accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;
+    --hero:#0d8f830f;--mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;
+      --hair:#242c38;--accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf14;}
+  }
+  :root[data-theme="light"]{--paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;--hair:#e3e7ec;--accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;--hero:#0d8f830f;}
+  :root[data-theme="dark"]{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;--hair:#242c38;--accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf14;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,40px)}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 10px}
+  h1{font-size:clamp(23px,4.2vw,34px);line-height:1.14;margin:0 0 12px;font-weight:760;letter-spacing:-.01em;text-wrap:balance}
+  .lead{color:var(--muted);font-size:15.5px;margin:0;max-width:68ch}
+  .meta{color:var(--muted);font-size:12.5px;font-family:var(--mono);margin-top:12px}
+  section{margin-top:clamp(28px,4.5vw,44px)}
+  h2{font-size:13px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 16px;padding-bottom:9px;border-bottom:1px solid var(--hair)}
+  h2 .n{color:var(--accent);margin-right:8px}
+  p{font-size:14.5px;margin:0 0 12px}
+  b{color:var(--ink)}
+
+  /* pipeline */
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+  .step{flex:1 1 120px;min-width:120px;border:1px solid var(--hair);border-radius:10px;background:var(--surface);padding:12px 12px}
+  .step.feat{border-color:var(--accent);background:var(--accent-soft)}
+  .step .k{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .step .v{font-size:13px;font-weight:600;margin-top:4px;line-height:1.35}
+  .callouts{display:grid;gap:9px;margin-top:14px}
+  .callout{font-size:13px;padding:10px 13px;border-radius:9px;border-left:3px solid var(--accent);background:var(--surface)}
+  .callout.warnb{border-left-color:var(--warn);background:var(--warn-soft)}
+  .callout b{color:var(--ink)}
+
+  ul{margin:0;padding-left:0;list-style:none}
+  li{font-size:14.5px;padding:7px 0 7px 22px;position:relative;border-bottom:1px solid var(--hair)}
+  li:last-child{border-bottom:none}
+  li::before{content:"";position:absolute;left:2px;top:15px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  li b{color:var(--ink)}
+
+  .tablecard{overflow-x:auto;border:1px solid var(--hair);border-radius:12px;background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:520px}
+  thead th{font-size:11.5px;font-weight:700;text-align:right;color:var(--muted);padding:12px 13px;border-bottom:1px solid var(--hair);white-space:nowrap}
+  thead th.name{text-align:left}
+  tbody td{padding:11px 13px;text-align:right;font-family:var(--mono);font-size:14px;border-bottom:1px solid var(--hair)}
+  tbody td.name{text-align:left;font-family:var(--sans);font-weight:600;font-size:14px}
+  tbody tr:last-child td{border-bottom:none}
+  tr.me td{background:var(--hero)}
+  tr.dim td{color:var(--muted)}
+  .tag{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:1px 7px;margin-left:6px}
+
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14px}
+  .kv dt{color:var(--muted);font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  .kv dd{margin:0;font-weight:600}
+
+  .verdict{border:1px solid var(--hair);border-radius:12px;background:var(--surface);padding:clamp(14px,3vw,22px)}
+  .verdict .row{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--hair);font-size:14px;align-items:baseline}
+  .verdict .row:last-child{border-bottom:none}
+  .verdict .icon{font-size:15px;flex:0 0 auto}
+  .verdict .row b{color:var(--ink)}
+  code{font-family:var(--mono);font-size:12px;background:var(--accent-soft);padding:1px 5px;border-radius:4px;color:var(--ink)}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Báo cáo phương pháp · Ablation</p>
+  <h1>One-shot RL trên feature map (objectness)</h1>
+  <p class="lead">Biến thể để agent RL quyết định <b>trực tiếp trên feature map</b> mà YOLO đã sinh ra, chọn vùng cắt <b>một phát</b> (không rê từng bước) — nhằm bỏ nút cổ chai rollout và cho phép batch.</p>
+  <p class="meta">REINFORCE · 6471 ảnh train · 20 000 bước · VisDrone test-dev 1610 ảnh · Tesla T4</p>
+
+  <section>
+    <h2><span class="n">01</span>Ý tưởng &amp; luồng xử lý</h2>
+    <div class="flow">
+      <div class="step"><div class="k">1 · Ảnh</div><div class="v">Ảnh drone 2000×1500</div></div>
+      <div class="step feat"><div class="k">2 · Feature map</div><div class="v">YOLO 1 lượt → heatmap objectness 16×16</div></div>
+      <div class="step feat"><div class="k">3 · Agent (RL)</div><div class="v">Chọn K đỉnh → policy: DROP / KEEP / ZOOM</div></div>
+      <div class="step"><div class="k">4 · Cắt + YOLO</div><div class="v">Gom crop giữ lại → batch 1 lượt</div></div>
+      <div class="step"><div class="k">5 · Gộp</div><div class="v">Merge NMS → kết quả</div></div>
+    </div>
+    <div class="callouts">
+      <div class="callout"><b>Phần "trên feature map":</b> agent nhìn objectness heatmap (13 chiều/vùng) để quyết định — rất rẻ (~2ms), không đụng ảnh gốc.</div>
+      <div class="callout warnb"><b>Điều phải nói thẳng:</b> để <b>chấm điểm (reward)</b> và <b>lấy detection thật</b>, bước 4 <b>vẫn phải cắt pixel &amp; chạy YOLO</b>. Với YOLO đóng băng, không có cách nào bỏ bước này — "feature map" chỉ nhanh ở khâu <b>quyết định</b>, không ở khâu phát hiện.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="n">02</span>RL học thế nào</h2>
+    <ul>
+      <li><b>State</b> = cửa sổ 3×3 objectness quanh vùng + 4 scalar (đỉnh, toạ độ chuẩn hoá) = <b>13 chiều</b>. Nhỏ hơn nhiều state 5660 chiều của bản rê ROI.</li>
+      <li><b>Hành động</b> (mỗi vùng, 1 phát): <code>DROP</code> · <code>KEEP</code> (crop 35%) · <code>ZOOM×1.5</code> (23%) · <code>ZOOM×2</code> (17.5%). Đúng ý "zoom nhiều / ít / không / bỏ".</li>
+      <li><b>Thuật toán</b>: <b>REINFORCE</b> (policy gradient) — lấy mẫu action theo policy, chỉ nhận reward của action đã chọn, cập nhật <code>−log π(a|s)·(r−baseline)</code>. RL đúng nghĩa, không phải học có giám sát.</li>
+      <li><b>Reward</b> = cắt crop, chạy YOLO, đối chiếu nhãn thật: <code>3·TP − 0.75·FP + 0.75·hữu_ích − phạt(rỗng/vô_ích)</code>. DROP = 0.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="n">03</span>Kết quả (test-dev 1610)</h2>
+    <div class="tablecard">
+      <table>
+        <thead><tr><th class="name">Phương pháp</th><th>mAP@.5</th><th>Recall</th><th>FP/ảnh</th><th>Crop</th><th>ms</th></tr></thead>
+        <tbody>
+          <tr class="dim"><td class="name">YOLO full@640</td><td>0.270</td><td>0.217</td><td>33.9</td><td>1.0</td><td>56</td></tr>
+          <tr class="me"><td class="name">One-shot feature-map<span class="tag">bản này</span></td><td>0.295</td><td>0.346</td><td>45.3</td><td>3.6</td><td>154</td></tr>
+          <tr class="dim"><td class="name">SAHI</td><td>0.303</td><td>0.457</td><td>98.7</td><td>27.6</td><td>542</td></tr>
+          <tr class="dim"><td class="name">RL di chuyển (batched)</td><td>0.357</td><td>0.497</td><td>91.1</td><td>16.6</td><td>496</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px">So với <b>YOLO gốc</b>: recall <b>.217 → .346 (+59%)</b> và mAP <b>.270 → .295</b>, chỉ tốn <b>3.6 crop/ảnh</b>. So với <b>SAHI</b>: mAP gần bằng (kém 0.8đ) nhưng <b>ít crop 7.7×</b>, <b>FP thấp hơn 54%</b>, <b>nhanh 3.5×</b>. Đây là điểm <b>nhanh &amp; ít nhiễu nhất</b> trong nhóm cắt lát.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">04</span>Ablation: mức zoom</h2>
+    <dl class="kv">
+      <dt>Policy chọn</dt><dd>DROP 68% · KEEP 32% · ZOOM 0%</dd>
+      <dt>Oracle (tối ưu)</dt><dd>DROP 78% · KEEP 19% · ZOOM 4.4%</dd>
+    </dl>
+    <p style="margin-top:12px">Policy <b>không bao giờ zoom</b> — và đây không phải lỗi train: ngay cả đáp án tối ưu cũng chỉ chọn zoom 4.4%. Kết luận: <b>với detector đóng băng ở crop 640, phóng đại thêm gần như vô ích</b> so với crop KEEP (vốn đã upscale vật nhỏ khi resize). Một kết quả phủ định trung thực, nhất quán với phân tích cắt-trên-đặc-trưng.</p>
+  </section>
+
+  <section>
+    <h2><span class="n">05</span>Kết luận trung thực</h2>
+    <div class="verdict">
+      <div class="row"><span class="icon">✅</span><div><b>Đạt mục tiêu tốc độ.</b> Bỏ rollout → 154ms, nhanh nhất nhóm cắt; batch được; FP thấp nhất. Agent tự học bỏ 68% vùng dư thừa.</div></div>
+      <div class="row"><span class="icon">⚖️</span><div><b>Chất lượng thua bản di chuyển.</b> mAP .295 vs .357, recall .346 vs .497. One-shot là <b>biến thể nhẹ/nhanh</b>, không phải bản mạnh nhất.</div></div>
+      <div class="row"><span class="icon">🔍</span><div><b>"Train trên feature map" ≠ bỏ được YOLO.</b> Chỉ khâu quyết định chạy trên feature (rẻ); reward &amp; detection vẫn cần cắt pixel + YOLO (ràng buộc detector đóng băng).</div></div>
+      <div class="row"><span class="icon">🎯</span><div><b>Vai trò trong luận văn:</b> điểm Pareto tốc độ + ablation chứng minh (a) bỏ rollout thì mất recall, (b) zoom không có headroom. Bản đề xuất chính vẫn là <b>RL di chuyển (batched)</b>.</div></div>
+    </div>
+  </section>
+</div>

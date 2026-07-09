@@ -114,12 +114,14 @@ def select_rois_moving(det):
     return kept
 
 # ---------------- COCO mAP (101-point, IoU 0.5:0.95), tu chua, khong phu thuoc ultralytics ----------------
+_TRAPZ = getattr(np, "trapezoid", None) or np.trapz  # numpy 2.x doi ten trapz -> trapezoid
+
 def _ap101(rec, prec):
     mrec = np.concatenate(([0.0], rec, [1.0]))
     mpre = np.concatenate(([1.0], prec, [0.0]))
     mpre = np.maximum.accumulate(mpre[::-1])[::-1]
     x = np.linspace(0, 1, 101)
-    return float(np.trapz(np.interp(x, mrec, mpre), x))
+    return float(_TRAPZ(np.interp(x, mrec, mpre), x))
 
 def eval_map(preds, gts):
     """preds/gts: dict iid -> (boxes, scores, cls) / (boxes, cls). Tra mAP50, mAP50-95, ap50 moi lop."""

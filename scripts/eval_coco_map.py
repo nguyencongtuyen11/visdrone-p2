@@ -46,12 +46,13 @@ ap.add_argument("--max-attempts", type=int, default=14)
 ap.add_argument("--k", type=int, default=8)
 ap.add_argument("--chunk", type=int, default=16)
 ap.add_argument("--max-det", type=int, default=300, help="ultralytics val mac dinh 300")
+ap.add_argument("--weights", type=Path, default=ROOT / "best_visdrone.pt", help="doi weight moi sau khi fine-tune crop")
 ap.add_argument("--device", default="cuda")
 args = ap.parse_args()
 
 BASE, SLI, dev, MC = args.base, args.slice, args.device, args.map_conf
 IR = ROOT / "data" / "raw" / "images"; LR = ROOT / "data" / "raw" / "labels"
-CR = ROOT / "data" / "cache_ft"; WEIGHTS = ROOT / "best_visdrone.pt"
+CR = ROOT / "data" / "cache_ft"; WEIGHTS = args.weights
 CLASSES = list(range(10))
 CLASS_NAMES = ["pedestrian", "people", "bicycle", "car", "van", "truck",
                "tricycle", "awning-tricycle", "bus", "motor"]

@@ -42,6 +42,7 @@ ap.add_argument("--max-fine", type=int, default=8)
 ap.add_argument("--max-attempts", type=int, default=14)
 ap.add_argument("--chunk", type=int, default=16)
 ap.add_argument("--labels", action="store_true", help="ghi ten lop + conf tren moi box (dong dac thi roi)")
+ap.add_argument("--no-roi", action="store_true", help="an ROI do (chi ve detection)")
 ap.add_argument("--out-width", type=int, default=0, help=">0: thu nho anh ra de tiet kiem dia")
 ap.add_argument("--jpg-quality", type=int, default=90)
 ap.add_argument("--device", default="cuda")
@@ -125,6 +126,8 @@ def legend(im):
         cv2.rectangle(im, (x, y), (x + 14, y + 14), COLORS[i], -1)
         cv2.putText(im, nm, (x + 18, y + 12), FONT, 0.42, (255, 255, 255), 1, cv2.LINE_AA)
         y += 18
+    cv2.rectangle(im, (x, y), (x + 14, y + 14), (0, 0, 255), 2)
+    cv2.putText(im, "vung cat (ROI)", (x + 18, y + 12), FONT, 0.42, (255, 255, 255), 1, cv2.LINE_AA)
 
 def banner(im, text):
     w = im.shape[1]
@@ -147,17 +150,24 @@ for idx, img in enumerate(images):
         full_conf=CONF, full_iou=0.7, max_det=3000, device=dev, feature_layers=(16,), aux_grid_size=16,
         spatial_feature_channels=4, cache_root=CR, split=args.split, use_cache=False)
     fb, fs, fc = _full_predictions(det, icfg)
+    fine, coarse = [], []
     if args.method == "full":
         b, s, c = fb, fs, fc
     else:
-        rois = _fixed_grid_rois(det.image_shape, 0.6, 0.15)
-        if args.method == "rl":
-            rois = select_rois_moving(det) + rois
-        pb, ps, pc = crop_parts(img, rois)
+        coarse = _fixed_grid_rois(det.image_shape, 0.6, 0.15)
+        fine = select_rois_moving(det) if args.method == "rl" else []
+        pb, ps, pc = crop_parts(img, fine + coarse)
         b, s, c = _merge_predictions(det.image_shape, 0.5, [fb, *pb], [fs, *ps], [fc, *pc])
     draw(im, b, s, c, th)
+    if not args.no_roi and args.method != "full":
+        for r in coarse:      # luoi tho = ROI do MANH
+            x0, y0, x1, y1 = [int(round(float(v))) for v in r]
+            cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(1, W // 1000))
+        for r in fine:        # lat RL = ROI do DAM (noi bat)
+            x0, y0, x1, y1 = [int(round(float(v))) for v in r]
+            cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(2, W // 320))
     legend(im)
-    banner(im, f"{mname} | conf>={CONF} | {len(b)} vat the")
+    banner(im, f"{mname} | {len(b)} vat | {len(fine)} vung RL + {len(coarse)} luoi")
     if args.out_width and W > args.out_width:
         sc = args.out_width / W
         im = cv2.resize(im, (args.out_width, int(round(H * sc))), interpolation=cv2.INTER_AREA)

@@ -43,6 +43,7 @@ ap.add_argument("--max-attempts", type=int, default=14)
 ap.add_argument("--chunk", type=int, default=16)
 ap.add_argument("--labels", action="store_true", help="ghi ten lop + conf tren moi box (dong dac thi roi)")
 ap.add_argument("--no-roi", action="store_true", help="an ROI do (chi ve detection)")
+ap.add_argument("--show-grid", action="store_true", help="ve them luoi tho (mac dinh CHI ve lat RL cho sach)")
 ap.add_argument("--out-width", type=int, default=0, help=">0: thu nho anh ra de tiet kiem dia")
 ap.add_argument("--jpg-quality", type=int, default=90)
 ap.add_argument("--device", default="cuda")
@@ -160,10 +161,11 @@ for idx, img in enumerate(images):
         b, s, c = _merge_predictions(det.image_shape, 0.5, [fb, *pb], [fs, *ps], [fc, *pc])
     draw(im, b, s, c, th)
     if not args.no_roi and args.method != "full":
-        for r in coarse:      # luoi tho = ROI do MANH
-            x0, y0, x1, y1 = [int(round(float(v))) for v in r]
-            cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(1, W // 1000))
-        for r in fine:        # lat RL = ROI do DAM (noi bat)
+        if args.show_grid:    # luoi tho = ROI do MANH (mac dinh AN cho sach)
+            for r in coarse:
+                x0, y0, x1, y1 = [int(round(float(v))) for v in r]
+                cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(1, W // 1000))
+        for r in fine:        # lat RL = ROI do DAM (cai agent chon)
             x0, y0, x1, y1 = [int(round(float(v))) for v in r]
             cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(2, W // 320))
     legend(im)

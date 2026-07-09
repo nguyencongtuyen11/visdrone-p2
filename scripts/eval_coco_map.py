@@ -175,7 +175,7 @@ print(f"[coco] {len(images)} anh, split={args.split}, map-conf={MC}, max_det={ar
 print(f"[coco] RL di chuyen: {'CO' if policy_mv else 'THIEU'} | one-shot: {'CO' if policy_os else 'THIEU'}")
 
 gts = {}
-P = {"full": {}, "sahi": {}, "rl_move": {}, "oneshot": {}}
+P = {"full": {}, "sahi": {}, "coarse": {}, "rl_move": {}, "oneshot": {}}
 t0 = time.perf_counter()
 for idx, img in enumerate(images):
     if idx % 50 == 0 and idx:
@@ -199,10 +199,14 @@ for idx, img in enumerate(images):
     P["full"][iid] = full
     # SAHI (luoi 0.35/0.2)
     P["sahi"][iid] = merge_full(shape, full, crop_parts(img, _fixed_grid_rois(shape, 0.35, 0.2)))
-    # RL di chuyen (fine RL + luoi tho 0.6/0.15)
+    # ABLATION: luoi tho 0.6 KHONG co lat RL — crop dung lai cho rl_move
+    coarse_parts = crop_parts(img, _fixed_grid_rois(shape, 0.6, 0.15))
+    P["coarse"][iid] = merge_full(shape, full, coarse_parts)
+    # RL di chuyen (fine RL + luoi tho 0.6, dung lai coarse_parts)
     if policy_mv is not None:
-        rois = select_rois_moving(det) + _fixed_grid_rois(shape, 0.6, 0.15)
-        P["rl_move"][iid] = merge_full(shape, full, crop_parts(img, rois))
+        fp = crop_parts(img, select_rois_moving(det))
+        P["rl_move"][iid] = _merge_predictions(shape, 0.5,
+            [fb, *fp[0], *coarse_parts[0]], [fs, *fp[1], *coarse_parts[1]], [fc, *fp[2], *coarse_parts[2]])
     # one-shot
     if policy_os is not None:
         grid = objectness_grid(det); regions = propose_regions(det, k=args.k)
@@ -218,7 +222,8 @@ for idx, img in enumerate(images):
 
 print(f"\n===== COCO mAP (split={args.split}, {len(images)} anh, conf={MC}) =====")
 print(f"  {'method':16s}{'mAP50':>9s}{'mAP50-95':>10s}")
-order = [("full", "YOLO full@640"), ("sahi", "SAHI"), ("rl_move", "RL di chuyen"), ("oneshot", "one-shot")]
+order = [("full", "YOLO full@640"), ("sahi", "SAHI"), ("coarse", "luoi 0.6 (khong RL)"),
+         ("rl_move", "RL di chuyen"), ("oneshot", "one-shot")]
 map50_full = None
 for key, name in order:
     if not P[key]: continue

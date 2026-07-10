@@ -1,0 +1,42 @@
+# Train RL "VUNG NHO" (thu nghiem A): agent CHI duoc thuong khi bat vat NHO,
+# va PHAT CHONG manh de lat RAI RA (khong don 1 hotspot). Muc tieu: ROI do thuc su
+# nham vat nho ma luoi/full bo sot -> vuot luoi tho, thanh qua that cho hoi dong.
+# Train tren cache best_visdrone (KHONG rebuild cache); deploy/eval tren detector crop.
+includes:
+  - ft_cloud.yaml
+
+paths:
+  dqn_out_dir: runs/ft_rl_small/dqn
+  checkpoint: runs/ft_rl_small/dqn/best.pt
+
+env:
+  max_steps: 10
+  detected_overlap_penalty: 3.0     # phat chong len lat DA GIU (rai ra)
+  attempted_overlap_penalty: 3.0    # phat chong len lat da THU
+  old_slice_overlap_penalty: 5.0    # phat manh khi STOP trung lat cu
+
+infer:
+  max_slice_attempts: 14
+
+train:
+  seed: 42
+  use_crop_outcome_reward: true
+  crop_small_area_ratio: 0.002      # CHI thuong TP cho GT <= 0.2% dien tich anh (vat nho)
+  crop_fp_penalty: 1.0
+  eval_benchmark_images: 0
+  optimize_every: 8
+  num_envs: 6
+  batch_size: 256
+  min_replay: 512
+  replay_size: 30000
+  episodes: 6000
+  eval_interval: 200
+  eval_episodes: 30
+  eval_slice_cost_weight: 0.0
+  resume: true
+  resume_interval: 100
+  log_interval: 25
+  epsilon_decay_steps: 9000
+  guide_decay_steps: 9000
+  curriculum_steps: 9000
+  per_beta_frames: 120000

@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 from ultralytics import YOLO
 
-from rl_sahi.common.boxes import iou_matrix
+from rl_sahi.common.boxes import area, iou_matrix
 from rl_sahi.common.cache import DetectionCache
 from rl_sahi.common.data import image_id, image_to_label_path, read_yolo_labels
 from rl_sahi.inference.config import InferenceConfig
@@ -67,6 +67,7 @@ class CropOutcomeEvaluator:
         fp_penalty: float = 1.5,
         empty_penalty: float = 1.2,
         no_gain_penalty: float = 1.2,
+        small_area_ratio: float | None = None,
     ) -> None:
         self.model = model
         self.image_root = Path(image_root)
@@ -82,6 +83,8 @@ class CropOutcomeEvaluator:
         self.fp_penalty = float(fp_penalty)
         self.empty_penalty = float(empty_penalty)
         self.no_gain_penalty = float(no_gain_penalty)
+        # neu set: CHI thuong TP cho GT nho (dien tich/anh <= ratio) -> agent nham vat nho
+        self.small_area_ratio = None if small_area_ratio is None else float(small_area_ratio)
 
     # giải thích: Lấy các dự đoán trên toàn bộ ảnh gốc có độ tin cậy thỏa mãn ngưỡng
     def full_predictions(self, det: DetectionCache) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -362,21 +365,15 @@ class CropOutcomeEvaluator:
             [full_classes, *slice_classes_parts, classes],
         )
         # giải thích: Tính toán số lượng TP và FP của các trạng thái trước và sau để lấy hiệu số độ lợi
+        small_mask = None
+        if self.small_area_ratio is not None and len(gt_boxes):
+            h, w = image_shape
+            small_mask = (area(gt_boxes) / max(float(h) * float(w), 1.0)) <= self.small_area_ratio
         before_tp, before_fp = _match_counts(
-            before_boxes,
-            before_scores,
-            before_classes,
-            gt_boxes,
-            gt_classes,
-            self.iou_threshold,
+            before_boxes, before_scores, before_classes, gt_boxes, gt_classes, self.iou_threshold, small_mask,
         )
         after_tp, after_fp = _match_counts(
-            after_boxes,
-            after_scores,
-            after_classes,
-            gt_boxes,
-            gt_classes,
-            self.iou_threshold,
+            after_boxes, after_scores, after_classes, gt_boxes, gt_classes, self.iou_threshold, small_mask,
         )
         return int(after_tp - before_tp), int(after_fp - before_fp)
 
@@ -498,6 +495,7 @@ def _match_counts(
     gt_boxes: np.ndarray,
     gt_classes: np.ndarray,
     iou_threshold: float,
+    small_mask: np.ndarray | None = None,
 ) -> tuple[int, int]:
     boxes = np.asarray(boxes, dtype=np.float32).reshape(-1, 4)
     scores = np.asarray(scores, dtype=np.float32).reshape(-1)
@@ -523,7 +521,9 @@ def _match_counts(
         # giải thích: Nếu IoU lớn hơn hoặc bằng ngưỡng và nhãn đúng chưa được khớp, tính là TP, ngược lại là FP
         if float(ious[best_local]) >= iou_threshold and not matched[best]:
             matched[best] = True
-            tp += 1
+            if small_mask is None or bool(small_mask[best]):
+                tp += 1
+            # khop vat TO (khi loc small): KHONG tinh tp (khong thuong) va KHONG fp (khong phat)
         else:
             fp += 1
     return int(tp), int(fp)

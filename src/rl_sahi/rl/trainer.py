@@ -80,6 +80,7 @@ class TrainConfig:
     crop_fp_penalty: float = 1.5
     crop_empty_penalty: float = 1.2
     crop_no_gain_penalty: float = 1.2
+    crop_small_area_ratio: float = 0.0  # >0: CHI thuong TP cho vat nho (dien tich/anh <= gia tri)
     hard_hit_reward: float = 4.0
     crop_outcome_reward_scale: float = 0.1
     accepted_no_hard_penalty: float = 2.0
@@ -429,6 +430,7 @@ def make_crop_outcome_evaluator(
         fp_penalty=cfg.crop_fp_penalty,
         empty_penalty=cfg.crop_empty_penalty,
         no_gain_penalty=cfg.crop_no_gain_penalty,
+        small_area_ratio=(cfg.crop_small_area_ratio or None),
     )
 
 

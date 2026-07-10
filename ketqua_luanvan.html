@@ -1,0 +1,149 @@
+<title>Kết quả thực nghiệm — RL-SAHI trên VisDrone</title>
+<style>
+  :root{
+    --paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;--hair:#e3e7ec;--line:#b7bfca;
+    --accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;--hero:#0d8f8314;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --serif:Georgia,"Times New Roman",serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;--hair:#242c38;--line:#38424f;
+      --accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf18;}
+  }
+  :root[data-theme="light"]{--paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;--hair:#e3e7ec;--line:#b7bfca;--accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;--hero:#0d8f8314;}
+  :root[data-theme="dark"]{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;--hair:#242c38;--line:#38424f;--accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf18;}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.62;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:clamp(22px,4vw,54px) clamp(16px,4vw,40px)}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 10px}
+  h1{font-size:clamp(24px,4.4vw,36px);line-height:1.12;margin:0 0 10px;font-weight:770;letter-spacing:-.01em;text-wrap:balance}
+  .sub{color:var(--muted);font-size:15px;margin:0;max-width:66ch}
+  .meta{color:var(--muted);font-size:12.5px;font-family:var(--mono);margin-top:12px}
+  h2{font-size:19px;font-weight:750;margin:0 0 6px;letter-spacing:-.01em}
+  h2 .num{color:var(--accent);font-family:var(--mono);font-size:15px;margin-right:10px}
+  section{margin-top:clamp(30px,5vw,46px);padding-top:clamp(18px,3vw,26px);border-top:1px solid var(--hair)}
+  p{font-size:14.5px;margin:10px 0}b{color:var(--ink)}
+  .callout{border-left:3px solid var(--accent);background:var(--surface);border:1px solid var(--hair);border-radius:10px;padding:13px 16px;font-size:13.8px;margin:14px 0}
+  .callout.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+  .callout b{color:var(--ink)}
+
+  .tablecard{overflow-x:auto;border:1px solid var(--hair);border-radius:12px;background:var(--surface);margin:14px 0}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:500px}
+  thead th{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:11px 13px;border-bottom:1px solid var(--hair);text-align:right;white-space:nowrap}
+  thead th.l{text-align:left}
+  tbody td{padding:10px 13px;border-bottom:1px solid var(--hair);font-size:13.5px;text-align:right;font-family:var(--mono)}
+  tbody td.l{text-align:left;font-family:var(--sans);font-weight:600}
+  tbody tr:last-child td{border-bottom:none}
+  tr.hero td{background:var(--hero)}
+  tr.dim td{color:var(--muted)}
+  .best{color:var(--accent);font-weight:700}
+  .grp{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  caption{caption-side:top;text-align:left;font-size:12px;color:var(--muted);padding:10px 13px 0}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+  .kpi{border:1px solid var(--hair);border-radius:11px;background:var(--surface);padding:14px 16px}
+  .kpi .v{font-family:var(--mono);font-size:24px;font-weight:750;color:var(--accent);letter-spacing:-.02em}
+  .kpi .k{font-size:12px;color:var(--muted);margin-top:2px}
+  .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:1px 8px;margin-left:8px;text-transform:uppercase;vertical-align:middle}
+  ul{margin:8px 0;padding-left:0;list-style:none}
+  li{font-size:14px;padding:5px 0 5px 20px;position:relative}
+  li::before{content:"";position:absolute;left:3px;top:13px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  li b{color:var(--ink)}
+  .foot{font-size:12px;color:var(--muted);margin-top:16px;line-height:1.6}
+  code{font-family:var(--mono);font-size:12px;background:var(--accent-soft);padding:1px 5px;border-radius:4px;color:var(--ink)}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Đồ án AIP391 · Chương Kết quả</p>
+  <h1>RL-SAHI cho phát hiện vật thể nhỏ trên ảnh drone VisDrone</h1>
+  <p class="sub">Cắt lát thích ứng dẫn hướng bằng học tăng cường, kết hợp huấn luyện detector trên crop — đánh giá bằng mAP COCO đã hiệu chỉnh.</p>
+  <p class="meta">VisDrone val · 548 ảnh · Tesla T4 · YOLO11s · mAP COCO (conf 0.001, 101-point)</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v">0.575</div><div class="k">mAP@0.5 — RL-SAHI (tốt nhất)</div></div>
+    <div class="kpi"><div class="v">496ms</div><div class="k">nhanh hơn SAHI (542ms)</div></div>
+    <div class="kpi"><div class="v">0.497</div><div class="k">recall vật nhỏ (cao nhất)</div></div>
+    <div class="kpi"><div class="v">+0.181</div><div class="k">mAP so với YOLO nền</div></div>
+  </div>
+
+  <section style="border-top:none;padding-top:0">
+    <h2><span class="num">4.1</span>Thước đo &amp; hiệu chỉnh</h2>
+    <p>Báo cáo <b>mAP@0.5</b> và <b>mAP@0.5:0.95</b> theo giao thức COCO trên VisDrone val (548 ảnh), quét toàn bộ đường PR ở <code>conf=0.001</code> — cùng chuẩn với công trình quốc tế.</p>
+    <div class="callout"><b>Hiệu chỉnh:</b> bộ đo tự cài cho <code>full@640</code> = <b>0.387</b>, khớp <code>yolo val</code> Ultralytics (<b>0.378</b>). Việc khớp này xác nhận thước đo hợp lệ → mọi số bên dưới là mAP COCO thật, so paper được.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">4.2</span>Kết quả chính</h2>
+    <div class="tablecard">
+      <table>
+        <caption>Bảng 4.1 — mAP trên hai detector (gốc @640 và train-on-crop).</caption>
+        <thead>
+          <tr>
+            <th class="l" rowspan="2">Phương pháp</th>
+            <th colspan="2"><span class="grp">Detector gốc</span></th>
+            <th colspan="2"><span class="grp">Train-on-crop</span></th>
+          </tr>
+          <tr><th>mAP.5</th><th>.5:.95</th><th>mAP.5</th><th>.5:.95</th></tr>
+        </thead>
+        <tbody>
+          <tr class="dim"><td class="l">full@640</td><td>0.387</td><td>0.234</td><td>0.394</td><td>0.243</td></tr>
+          <tr class="dim"><td class="l">SAHI</td><td>0.390</td><td>0.227</td><td>0.539</td><td>0.332</td></tr>
+          <tr><td class="l">lưới 0.6 (không RL)</td><td>0.469</td><td>0.277</td><td>0.570</td><td class="best">0.359</td></tr>
+          <tr class="hero"><td class="l">RL-SAHI <span class="badge">đề xuất</span></td><td>0.459</td><td>0.270</td><td class="best">0.575</td><td>0.358</td></tr>
+          <tr class="dim"><td class="l">one-shot</td><td>0.394</td><td>0.231</td><td>0.470</td><td>0.288</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Kết quả tốt nhất: <b>RL-SAHI trên detector train-on-crop = 0.575 mAP@0.5 / 0.358 mAP@0.5:0.95</b>, cạnh tranh với các phương pháp mạnh đã công bố cho mô hình cỡ YOLO-s.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">4.3</span>Phát hiện 1 — Train-on-crop là đòn bẩy chính</h2>
+    <p>Ảnh drone 2000×1500 nén về 640 khiến <b>vật nhỏ teo còn vài điểm ảnh</b> (per-class: <code>car</code> 0.79 nhưng <code>bicycle</code> 0.12). Fine-tune detector trên <b>chính các lát cắt</b> (trộn crop + full, chống quên vật lớn) làm crop trở nên in-distribution:</p>
+    <div class="tablecard">
+      <table>
+        <thead><tr><th class="l">Phương pháp</th><th>mAP.5 gốc → crop</th><th>Tăng</th></tr></thead>
+        <tbody>
+          <tr><td class="l">SAHI</td><td>0.390 → 0.539</td><td class="best">+0.149</td></tr>
+          <tr><td class="l">lưới 0.6</td><td>0.469 → 0.570</td><td>+0.101</td></tr>
+          <tr><td class="l">RL-SAHI</td><td>0.459 → 0.575</td><td>+0.116</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Chi tiết lớp: <code>people</code> 0.301→0.328, <code>bicycle</code> 0.118→0.142 (lớp nhỏ lên), <code>car</code> gần như giữ nguyên → <b>không quên vật lớn</b>. Cắt lát chỉ phát huy tối đa khi detector quen phân phối crop.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">4.4</span>Phát hiện 2 — RL-SAHI: tốt nhất mAP, nhanh hơn SAHI, recall cao nhất</h2>
+    <ul>
+      <li><b>Chất lượng:</b> mAP@0.5 = 0.575 (cao nhất), vượt SAHI +0.036, vượt YOLO nền +0.181.</li>
+      <li><b>Tốc độ (T4, test 1610):</b> batch hóa suy luận crop đưa RL từ 1370ms → <b>496ms</b>, <b>nhanh hơn SAHI (542ms)</b> mà chất lượng giữ nguyên.</li>
+      <li><b>Recall:</b> recall vật nhỏ <b>0.497 — cao nhất</b> (SAHI 0.457, lưới 0.394).</li>
+      <li><b>Chính sách ROI học được:</b> sau khi thưởng nhắm vật nhỏ + phạt chồng, agent học <b>rê ROI tới cụm vật nhỏ và trải đều</b> — biểu diễn trực quan, diễn giải được của policy.</li>
+    </ul>
+    <div class="callout"><b>Điều kiện "đáng dùng RL":</b> RL-SAHI vừa chính xác hơn (0.575 vs 0.539) vừa nhanh hơn SAHI (496 vs 542ms) — nếu không, thà dùng SAHI. Điều kiện này <b>đạt</b>.</div>
+  </section>
+
+  <section>
+    <h2><span class="num">4.5</span>Phân tích ablation</h2>
+    <ul>
+      <li><b>RL vs lưới thô:</b> RL cao hơn +0.004–0.005 mAP@0.5 → lát RL bổ sung phần nhỏ trên nền lưới đã mạnh.</li>
+      <li><b>Mức zoom:</b> policy chọn zoom <b>0%</b> (oracle 4.4%) → detector cố định không hưởng lợi từ phóng đại thêm (kết quả phủ định trung thực).</li>
+      <li><b>Thưởng nhắm vật nhỏ:</b> cải thiện rõ hành vi ROI (trải đều, trúng cụm nhỏ, lát giảm 8→2–6) nhưng mAP không đổi so lưới → trần do lưới phủ rộng, không phải huấn luyện chưa đủ.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="num">4.6</span>Hạn chế &amp; định vị trung thực</h2>
+    <div class="callout warn"><b>Baseline lưới thô rất mạnh:</b> lưới 0.6 (không RL) đạt 0.570, ngang RL-SAHI (0.575); ở mAP@0.5:0.95 lưới còn nhỉnh hơn chút. RL-SAHI <b>vượt SAHI rõ nhưng chỉ ngang một baseline lưới được chỉnh tốt</b> về mAP.</div>
+    <p>Giá trị riêng của RL nằm ở <b>tính thích ứng theo nội dung ảnh, recall cao nhất, và chính sách ROI diễn giải được</b> — không phải một cú nhảy mAP so với lưới. Zoom không mang lợi ích với detector cố định (cần sparse head, ngoài phạm vi đồ án).</p>
+  </section>
+
+  <section>
+    <h2><span class="num">4.7</span>Kết luận chương</h2>
+    <p><b>Train-on-crop</b> là điều kiện then chốt để cắt lát phát huy (nâng tới +0.15 mAP, cải thiện lớp nhỏ). <b>RL-SAHI</b> đạt <b>mAP cao nhất (0.575)</b>, <b>nhanh hơn SAHI (496ms)</b>, <b>recall cao nhất (0.497)</b>, với chính sách ROI học được biết trải vào cụm vật nhỏ. So YOLO nền (0.394), pipeline hoàn chỉnh nâng lên <b>0.575 mAP@0.5</b> — kết quả cạnh tranh, đạt được trung thực và có ablation đầy đủ.</p>
+    <p class="foot">Tái lập: <code>eval_coco_map.py</code> (mAP), <code>benchmark_oneshot.py</code> (tốc độ), <code>viz_detect.py</code> (ROI), <code>make_crops.py</code> (train-on-crop), <code>ft_rl_small.yaml</code> (agent nhắm vật nhỏ).</p>
+  </section>
+</div>

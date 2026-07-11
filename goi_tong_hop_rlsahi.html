@@ -1,0 +1,287 @@
+<title>RL-SAHI — Gói tổng hợp cho team & bảo vệ</title>
+<style>
+  :root{
+    --paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;--hair:#e3e7ec;--line:#b7bfca;
+    --accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;--hero:#0d8f8314;
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;--hair:#242c38;--line:#38424f;
+      --accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf18;}
+  }
+  :root[data-theme="light"]{--paper:#f5f7f9;--surface:#ffffff;--ink:#141922;--muted:#5b6472;--hair:#e3e7ec;--line:#b7bfca;--accent:#0d8f83;--accent-soft:#0d8f8316;--warn:#c2410c;--warn-soft:#c2410c14;--hero:#0d8f8314;}
+  :root[data-theme="dark"]{--paper:#0d1117;--surface:#161c26;--ink:#e6e9ee;--muted:#93a0b2;--hair:#242c38;--line:#38424f;--accent:#2dd4bf;--accent-soft:#2dd4bf1c;--warn:#fb923c;--warn-soft:#fb923c1a;--hero:#2dd4bf18;}
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,40px)}
+  .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 10px}
+  h1{font-size:clamp(24px,4.4vw,38px);line-height:1.1;margin:0 0 12px;font-weight:780;letter-spacing:-.015em;text-wrap:balance}
+  .lead{color:var(--muted);font-size:15.5px;margin:0;max-width:70ch}
+  .meta{color:var(--muted);font-size:12.5px;font-family:var(--mono);margin-top:12px}
+  section{margin-top:clamp(34px,5.5vw,54px)}
+  h2{font-size:20px;font-weight:760;margin:0 0 4px;letter-spacing:-.01em}
+  h2 .num{color:var(--accent);font-family:var(--mono);font-size:15px;margin-right:10px}
+  .h2sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  p{font-size:14.5px;margin:10px 0}b{color:var(--ink)}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:20px 0 0}
+  .kpi{border:1px solid var(--hair);border-radius:12px;background:var(--surface);padding:14px 16px}
+  .kpi .v{font-family:var(--mono);font-size:25px;font-weight:760;color:var(--accent);letter-spacing:-.02em}
+  .kpi .k{font-size:12px;color:var(--muted);margin-top:3px}
+
+  nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  nav.toc a{font-size:12.5px;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--hair);background:var(--surface);border-radius:20px;padding:5px 12px}
+  nav.toc a:hover{border-color:var(--accent)}
+
+  .story{border-left:3px solid var(--accent);background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:16px 20px;font-size:15px}
+  .story b{color:var(--ink)}
+
+  .tablecard{overflow-x:auto;border:1px solid var(--hair);border-radius:13px;background:var(--surface);margin:14px 0}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:560px}
+  thead th{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:11px 12px;border-bottom:1px solid var(--hair);text-align:right;white-space:nowrap}
+  thead th.l{text-align:left}
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--hair);font-size:13.5px;text-align:right;font-family:var(--mono)}
+  tbody td.l{text-align:left;font-family:var(--sans);font-weight:600;white-space:nowrap}
+  tbody td.d{text-align:left;font-family:var(--sans);font-weight:400;color:var(--muted);font-size:13px}
+  tbody tr:last-child td{border-bottom:none}
+  tr.hero td{background:var(--hero)}
+  tr.dim td{color:var(--muted)}
+  .best{color:var(--accent);font-weight:700}
+  .badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:1px 8px;margin-left:7px;text-transform:uppercase;vertical-align:middle}
+  .cap{font-size:12px;color:var(--muted);margin:-6px 0 0;font-style:italic}
+
+  ol.tl{list-style:none;margin:0;padding:0;counter-reset:s}
+  ol.tl li{position:relative;padding:0 0 18px 46px;border-left:2px solid var(--hair);margin-left:15px}
+  ol.tl li:last-child{border-left-color:transparent;padding-bottom:0}
+  ol.tl li::before{counter-increment:s;content:counter(s);position:absolute;left:-15px;top:-2px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  ol.tl h3{margin:0 0 3px;font-size:15px;font-weight:700}
+  ol.tl p{margin:0;font-size:13.5px;color:var(--muted)}
+  ol.tl p b{color:var(--ink)}
+
+  .qa{display:grid;gap:12px}
+  .q{border:1px solid var(--hair);border-radius:12px;background:var(--surface);overflow:hidden}
+  .q .qq{padding:13px 16px;font-weight:700;font-size:14.5px;background:var(--warn-soft);border-bottom:1px solid var(--hair)}
+  .q .qq::before{content:"HỎI  ";font-size:10px;letter-spacing:.1em;color:var(--warn);font-weight:800;margin-right:6px}
+  .q .qa-a{padding:13px 16px;font-size:14px}
+  .q .qa-a::before{content:"ĐÁP  ";font-size:10px;letter-spacing:.1em;color:var(--accent);font-weight:800;margin-right:6px}
+  .q .qa-a b{color:var(--ink)}
+
+  .diagram{display:flex;justify-content:center;border:1px solid var(--hair);border-radius:14px;background:var(--surface);padding:clamp(10px,2.5vw,20px);margin-top:14px}
+  .diagram svg{width:100%;max-width:500px;height:auto}
+
+  ul.files{margin:0;padding:0;list-style:none}
+  ul.files li{padding:9px 0 9px 24px;border-bottom:1px solid var(--hair);font-size:14px;position:relative}
+  ul.files li:last-child{border-bottom:none}
+  ul.files li::before{content:"▸";position:absolute;left:4px;color:var(--accent);font-weight:700}
+  code{font-family:var(--mono);font-size:12px;background:var(--accent-soft);padding:1px 5px;border-radius:4px;color:var(--ink)}
+  .callout{border-left:3px solid var(--warn);background:var(--warn-soft);border-radius:10px;padding:12px 16px;font-size:13.5px;margin:14px 0}
+  .note{font-size:12.5px;color:var(--muted)}
+  svg text{font-family:var(--sans)}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">AIP391 · Gói tổng hợp cho team &amp; bảo vệ</p>
+  <h1>RL-SAHI: Cắt lát thích ứng bằng học tăng cường cho phát hiện vật thể nhỏ</h1>
+  <p class="lead">Một trang duy nhất: câu chuyện, số cuối cùng (COCO chuẩn, đã calibrate), bằng chứng agent học được, sơ đồ cơ chế, Q&amp;A phản biện, và nơi lấy mọi tài liệu.</p>
+  <p class="meta">VisDrone2019-DET · val 548 ảnh · Tesla T4 · YOLO11s · cập nhật 11/07/2026</p>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v">0.575</div><div class="k">mAP@0.5 — RL-SAHI, cao nhất mọi cấu hình</div></div>
+    <div class="kpi"><div class="v">0.605</div><div class="k">recall vật nhỏ (ghép 1-1) — cao nhất</div></div>
+    <div class="kpi"><div class="v">496ms</div><div class="k">nhanh hơn SAHI (542ms)</div></div>
+    <div class="kpi"><div class="v">+0.02–0.04</div><div class="k">RL thắng mọi heuristic đặt lát, mọi ngân sách</div></div>
+  </div>
+
+  <nav class="toc">
+    <a href="#story">Câu chuyện 30s</a><a href="#journey">Hành trình</a><a href="#main">Bảng kết quả</a>
+    <a href="#speed">Tốc độ</a><a href="#sweep">Bằng chứng agent học</a><a href="#loop">Cơ chế 2 vòng lặp</a>
+    <a href="#ablation">Ablation</a><a href="#qa">Q&amp;A phản biện</a><a href="#files">Tài liệu</a>
+  </nav>
+
+  <section id="story">
+    <h2><span class="num">01</span>Câu chuyện 30 giây</h2>
+    <div class="story">
+      YOLO ở 640px <b>mù vật nhỏ</b> — ảnh drone 2000×1500 nén xuống, người/xe đạp còn vài pixel (mAP chỉ <b>0.394</b>). Chúng tôi làm 2 việc: <b>(1) train-on-crop</b> — fine-tune detector trên chính các lát cắt, điều kiện mở khoá slicing (SAHI +0.149, RL +0.116); <b>(2) RL-SAHI</b> — agent DQN học rê ROI chọn vùng cắt theo nội dung ảnh, gộp với lưới thô, batch hoá suy luận. Kết quả: <b>0.575 mAP@0.5 và 0.605 recall vật nhỏ — tốt nhất mọi cấu hình — nhanh hơn SAHI (496 vs 542ms)</b>, và chính sách đặt lát <b>thắng mọi heuristic ở mọi ngân sách crop</b>.
+    </div>
+  </section>
+
+  <section id="journey">
+    <h2><span class="num">02</span>Hành trình — mình đã làm gì</h2>
+    <p class="h2sub">Từ nghi vấn "mAP 0.27 sao thấp thế" đến bộ số bảo vệ được.</p>
+    <ol class="tl">
+      <li><h3>Giải mã "0.27 vs 0.377"</h3><p>Cùng weight mà số lệch → truy ra <b>lỗi thước đo</b>: pipeline cũ cắt conf 0.10 làm cụt đường PR. Calibrate lại theo chuẩn ultralytics: full@640 = <b>0.387 ≈ 0.378</b> — detector không hề kém, chỉ đo chặt tay.</p></li>
+      <li><h3>Đo chuẩn COCO + ablation trung thực</h3><p>Trên detector cũ: RL .459 nhưng lưới thô 0.6 <b>.469 — RL còn hại nhẹ</b>. Không giấu, dùng nó làm la bàn.</p></li>
+      <li><h3>Train-on-crop — cú hích lớn nhất</h3><p>Cắt 39,957 tile 640px + trộn ảnh full, fine-tune 20 epoch. Crop thành in-distribution → <b>mọi slicing bùng nổ</b> (SAHI .390→.539) và <b>RL lật thành #1: .575</b>. Lớp nhỏ lên đúng chỗ (people .30→.33, bicycle .12→.14).</p></li>
+      <li><h3>Truy "ROI có phải thành quả agent?"</h3><p>Phản biện nội bộ 4 góc nhìn tìm ra <b>lỗi cấu trúc</b> (reward lúc train so với baseline chỉ-có-full, thiếu lưới) → tự khai vào luận văn + thiết kế thí nghiệm quyết định.</p></li>
+      <li><h3>Budget sweep — bằng chứng vàng</h3><p>Cùng cỡ lát, cùng số lát K, chỉ khác <i>ai chọn vị trí</i>: <b>RL thắng top-K objectness / center / random ở MỌI K</b> (+0.02–0.04 mAP; recall hơn tới +0.12). "Agent biết nhìn đâu" = có bằng chứng số.</p></li>
+      <li><h3>Recall metric 1-1 sạch</h3><p>RL-SAHI <b>0.605 recall vật nhỏ — cao nhất</b> (+0.041 so lưới); SAHI 27.6 crop còn thua lưới 9 crop → recall đến từ đặt lát trúng chỗ, không phải nhiều crop.</p></li>
+      <li><h3>Đóng gói</h3><p>Chương Kết quả hoàn chỉnh + <b>vá Thesis.docx</b>: xoá sạch ~70 đoạn template Y khoa sót, chèn số thật, viết lại Abstract/Contribution, sửa C_map 19→21.</p></li>
+    </ol>
+  </section>
+
+  <section id="main">
+    <h2><span class="num">03</span>Bảng kết quả chính</h2>
+    <p class="h2sub">VisDrone val 548 · COCO mAP (conf 0.001, 101-point, đã calibrate) · recall vật nhỏ ghép 1-1 @conf 0.25. Ngoặc = detector trước train-on-crop.</p>
+    <div class="tablecard">
+      <table>
+        <thead><tr><th class="l">Phương pháp</th><th>Crop/ảnh</th><th>mAP@.5</th><th>mAP@.5:.95</th><th>Recall vật nhỏ</th></tr></thead>
+        <tbody>
+          <tr class="dim"><td class="l">YOLO full@640</td><td>1.0</td><td>0.394 (0.387)</td><td>0.243 (0.234)</td><td>0.239</td></tr>
+          <tr class="dim"><td class="l">SAHI lưới 0.35</td><td>27.6</td><td>0.539 (0.390)</td><td>0.332 (0.227)</td><td>0.550</td></tr>
+          <tr><td class="l">Lưới thô 0.6 (không RL)</td><td>9.0</td><td>0.570 (0.469)</td><td class="best">0.359 (0.277)</td><td>0.564</td></tr>
+          <tr class="hero"><td class="l">RL-SAHI<span class="badge">đề xuất</span></td><td>16.6</td><td class="best">0.575 (0.459)</td><td>0.358 (0.270)</td><td class="best">0.605</td></tr>
+          <tr class="dim"><td class="l">One-shot RL (bản nhẹ)</td><td>3.6</td><td>0.470 (0.394)</td><td>0.288 (0.231)</td><td>0.423</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="cap">Train-on-crop nâng slicing tới +0.149 mAP; RL-SAHI dẫn đầu cả mAP@0.5 lẫn recall.</p>
+    <p><b>Đọc nhanh:</b> so detector gốc, pipeline hoàn chỉnh nâng <b>0.394 → 0.575 (+46%)</b>. So SAHI: <b>+0.036 mAP, +0.055 recall, ít crop hơn 40%, nhanh hơn</b>. So lưới thô: ngang mAP nhưng <b>+0.041 recall vật nhỏ</b> — lát RL bắt đúng cái lưới sót.</p>
+  </section>
+
+  <section id="speed">
+    <h2><span class="num">04</span>Tốc độ — batch hoá trị "RL chậm"</h2>
+    <div class="tablecard">
+      <table>
+        <thead><tr><th class="l">Cấu hình</th><th>ms/ảnh (T4)</th><th class="l" style="text-align:left">Ghi chú</th></tr></thead>
+        <tbody>
+          <tr class="dim"><td class="l">YOLO full@640</td><td>56</td><td class="d">nền, bỏ sót vật nhỏ</td></tr>
+          <tr class="dim"><td class="l">One-shot RL</td><td>154</td><td class="d">bản nhẹ nhất</td></tr>
+          <tr class="dim"><td class="l">Lưới thô 0.6</td><td>~205</td><td class="d">tĩnh, không thích ứng</td></tr>
+          <tr class="hero"><td class="l">RL-SAHI (batched)</td><td class="best">496</td><td class="d">nhanh hơn SAHI, chất lượng cao nhất</td></tr>
+          <tr class="dim"><td class="l">SAHI</td><td>542</td><td class="d">lưới dày 28 lát</td></tr>
+          <tr class="dim"><td class="l">RL-SAHI (tuần tự, cũ)</td><td>1370</td><td class="d">trước khi batch hoá</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Mấu chốt:</b> rollout RL không gọi YOLO trong vòng lặp — toàn bộ crop dồn ra <b>chạy YOLO 1 lượt</b> (batch). Chỉ đổi <i>thời điểm gọi YOLO</i>: <b>1370 → 496ms, chất lượng giữ nguyên</b> (.357 vs .356 ở protocol cũ).</p>
+  </section>
+
+  <section id="sweep">
+    <h2><span class="num">05</span>Bằng chứng "agent HỌC được nhìn đâu" (budget sweep)</h2>
+    <p class="h2sub">Cố định cỡ lát (0.30) và số lát K — chỉ khác AI CHỌN VỊ TRÍ. mAP@0.5, val 548.</p>
+    <div class="tablecard">
+      <table>
+        <thead><tr><th class="l">K lát</th><th>RL policy</th><th>Top-K objectness</th><th>Center-K</th><th>Random-K</th><th>RL hơn heuristic tốt nhất</th></tr></thead>
+        <tbody>
+          <tr><td class="l">2</td><td class="best">0.440</td><td>0.411</td><td>0.421</td><td>0.405</td><td>+0.019…0.029</td></tr>
+          <tr><td class="l">4</td><td class="best">0.464</td><td>0.422</td><td>0.423</td><td>0.406</td><td>+0.041</td></tr>
+          <tr><td class="l">6</td><td class="best">0.473</td><td>0.439</td><td>0.444</td><td>0.412</td><td>+0.029</td></tr>
+          <tr><td class="l">8</td><td class="best">0.480</td><td>0.457</td><td>0.456</td><td>0.419</td><td>+0.023</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>RL thắng tất cả baseline đặt-lát ở mọi ngân sách</b> — kể cả top-K objectness (heuristic mạnh nhất, có sẵn trong repo). Recall vật nhỏ còn cách biệt hơn: K=2 RL <b>0.379</b> vs topK 0.263 (+0.12). → Vị trí ROI đỏ là <b>thành quả học được</b>, heuristic tĩnh không tái tạo nổi.</p>
+    <p class="note">Phát hiện kèm theo: ô 0.6 (phủ rộng) &gt; lát 0.30 cùng K — "coverage &gt; zoom". Agent bị giới hạn lát ≤0.35 nên cấu hình tốt nhất là hybrid: lưới lo phủ, RL lo tinh chỉnh có chủ đích.</p>
+  </section>
+
+  <section id="loop">
+    <h2><span class="num">06</span>Cơ chế — 2 vòng lặp của RL-SAHI</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 560 772" xmlns="http://www.w3.org/2000/svg" role="img">
+        <title>Sơ đồ 2 vòng lặp RL-SAHI batched</title>
+        <desc>Vòng ngoài lặp tối đa 14 lần giữ tối đa 8 lát; vòng trong rollout rê ROI tối đa 10 bước; sau đó gom lát với lưới thô rồi YOLO batch 1 lượt.</desc>
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+        <style>
+          .bx{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+          .t{fill:var(--ink);font-size:13.5px;font-weight:650}
+          .s{fill:var(--muted);font-size:10.5px}
+          .lb{fill:none;stroke:var(--line);stroke-width:1.4;stroke-dasharray:5 4}
+          .ll{fill:var(--accent);font-size:11px;font-weight:700}
+          .fl{fill:none;stroke:var(--muted);stroke-width:1.6}
+          .sm{fill:var(--muted);font-size:10px;font-style:italic}
+          .ac{stroke:var(--accent);stroke-width:2.4}
+          .at{fill:var(--accent);font-weight:750}
+        </style>
+        <rect class="bx" x="100" y="18" width="360" height="46" rx="10"/>
+        <text class="t" x="280" y="38" text-anchor="middle">① YOLO 1 lượt → detection cache</text>
+        <text class="s" x="280" y="54" text-anchor="middle">feature / objectness map · phần TĨNH, 1 lần</text>
+        <line class="fl" x1="280" y1="64" x2="280" y2="84" marker-end="url(#ah)"/>
+        <rect class="lb" x="60" y="86" width="440" height="446" rx="12"/>
+        <text class="ll" x="76" y="106">VÒNG NGOÀI · lặp ≤14 lần · giữ ≤8 lát</text>
+        <rect class="bx" x="150" y="120" width="260" height="42" rx="10"/>
+        <text class="t" x="280" y="139" text-anchor="middle">clone_env</text>
+        <text class="s" x="280" y="153" text-anchor="middle">dựng env, dùng lại phần tĩnh</text>
+        <line class="fl" x1="280" y1="162" x2="280" y2="182" marker-end="url(#ah)"/>
+        <rect class="lb" x="95" y="184" width="370" height="150" rx="12"/>
+        <text class="ll" x="111" y="204">VÒNG TRONG · rollout (rê ROI)</text>
+        <rect class="bx" x="140" y="216" width="280" height="56" rx="10"/>
+        <text class="t" x="280" y="238" text-anchor="middle">rê ROI: Q-net → 1 trong 11 action</text>
+        <text class="s" x="280" y="254" text-anchor="middle">8 hướng · zoom in/out · STOP</text>
+        <path class="fl" d="M140,258 C112,258 112,224 140,224" marker-end="url(#ah)"/>
+        <text class="ll" x="128" y="300" text-anchor="middle">↺ ≤10 bước, tới khi STOP → 1 ROI</text>
+        <line class="fl" x1="280" y1="334" x2="280" y2="352" marker-end="url(#ah)"/>
+        <rect class="bx" x="150" y="354" width="260" height="52" rx="10"/>
+        <text class="t" x="280" y="376" text-anchor="middle">Gate → giữ / bỏ lát</text>
+        <text class="s" x="280" y="392" text-anchor="middle">gain≥1 · utility≥0.2 · không chồng lấn</text>
+        <path class="fl" d="M410,380 C468,380 468,141 412,141" marker-end="url(#ah)"/>
+        <text class="ll" x="484" y="262" text-anchor="middle" transform="rotate(90 484 262)">chưa đủ 8 &amp; còn lần thử</text>
+        <line class="fl" x1="280" y1="406" x2="280" y2="552" marker-end="url(#ah)"/>
+        <text class="sm" x="292" y="472" text-anchor="start">đủ 8 lát HOẶC</text>
+        <text class="sm" x="292" y="486" text-anchor="start">hết 14 lần</text>
+        <rect class="bx" x="100" y="554" width="360" height="46" rx="10"/>
+        <text class="t" x="280" y="574" text-anchor="middle">② Gom: ≤8 lát RL + ~8 ô lưới thô</text>
+        <text class="s" x="280" y="590" text-anchor="middle">= 16.6 crop / ảnh</text>
+        <line class="fl" x1="280" y1="600" x2="280" y2="620" marker-end="url(#ah)"/>
+        <rect class="bx ac" x="100" y="622" width="360" height="48" rx="10"/>
+        <text class="t at" x="280" y="642" text-anchor="middle">③ BATCH YOLO — chạy 1 lượt</text>
+        <text class="s" x="280" y="658" text-anchor="middle">YOLO CHỈ chạy ở đây (nút tốn thời gian)</text>
+        <line class="fl" x1="280" y1="670" x2="280" y2="690" marker-end="url(#ah)"/>
+        <rect class="bx" x="100" y="692" width="360" height="44" rx="10"/>
+        <text class="t" x="280" y="719" text-anchor="middle">④ Merge NMS → kết quả</text>
+        <rect x="100" y="750" width="14" height="14" rx="3" class="ac" fill="none"/>
+        <text class="s" x="120" y="761">= nơi YOLO chạy (tách khỏi rollout → mới batch được)</text>
+      </svg>
+    </div>
+    <p class="note">Hai vòng lặp chỉ chạy Q-net trên cache (~133ms cho cả 14 lần thử); YOLO dồn ra ô xanh chạy 1 lượt (~294ms). Bản tuần tự cũ gọi YOLO trong vòng lặp → 1370ms.</p>
+  </section>
+
+  <section id="ablation">
+    <h2><span class="num">07</span>Ablation &amp; phát hiện phụ</h2>
+    <div class="tablecard">
+      <table>
+        <thead><tr><th class="l">Câu hỏi</th><th class="l" style="text-align:left">Kết quả</th></tr></thead>
+        <tbody>
+          <tr><td class="l">Zoom sâu có giúp?</td><td class="d">KHÔNG — policy one-shot chọn zoom 0% (oracle cũng chỉ 4.4%). Detector cố định không lợi từ phóng đại thêm.</td></tr>
+          <tr><td class="l">Reward nhắm vật nhỏ?</td><td class="d">Đổi hành vi rõ: agent giữ 2–6 lát RẢI RA trúng cụm vật nhỏ (demo đẹp), mAP không đổi so lưới → trần do lưới phủ rộng.</td></tr>
+          <tr><td class="l">Lát RL thêm gì trên nền lưới?</td><td class="d">+0.004–0.005 mAP nhưng <b>+0.041 recall vật nhỏ</b> — mua recall gần như miễn phí.</td></tr>
+          <tr><td class="l">Cỡ lát vs vị trí lát?</td><td class="d">Cỡ quan trọng hơn (coverage &gt; zoom) → lý giải hybrid là cấu hình tốt nhất.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="qa">
+    <h2><span class="num">08</span>Q&amp;A phản biện — 3 câu hỏi độc &amp; đáp án</h2>
+    <div class="qa">
+      <div class="q">
+        <div class="qq">Lưới cố định không học gì đạt 0.570 @ 9 crop/205ms. Rút agent RL ra khỏi hệ, mất đúng cái gì?</div>
+        <div class="qa-a">Mất <b>+0.041 recall vật nhỏ</b> (0.605 → 0.564, metric ghép 1-1) và mất <b>0.02–0.04 mAP ở mọi ngân sách crop</b> so với heuristic đặt-lát tốt nhất (bảng budget sweep). RL còn thích ứng theo từng ảnh — lưới thì mù nội dung.</div>
+      </div>
+      <div class="q">
+        <div class="qq">Recall cao hơn chẳng qua vì chạy nhiều crop hơn?</div>
+        <div class="qa-a">Không — <b>SAHI dùng 27.6 crop (nhiều nhất) mà recall 0.550 THUA lưới 9 crop (0.564)</b>. Crop mù không mua được recall; recall của RL-SAHI đến từ lát <b>đặt trúng chỗ lưới sót</b>, và nó dùng ít crop hơn SAHI 40%.</div>
+      </div>
+      <div class="q">
+        <div class="qq">Sao mAP của RL chỉ hơn lưới +0.005? Vậy RL để làm gì?</div>
+        <div class="qa-a"><b>Tự khai trong luận văn:</b> lúc train, baseline reward chỉ có YOLO full (không có lưới) nên agent chưa từng được tối ưu để bổ khuyết lưới — margin nhỏ là hệ quả cấu trúc, đã nêu hướng vá (trần kỳ vọng +0.01–0.02 vì lưới phủ kín). Giá trị RL nằm ở <b>recall có chủ đích, hiệu quả theo ngân sách, và chính sách diễn giải được</b> — cả ba có bằng chứng số.</div>
+      </div>
+    </div>
+    <div class="callout"><b>Nguyên tắc trình bày:</b> mọi điểm yếu đều đã tự khai trong mục Honest positioning của luận văn — hội đồng không đâm được cái mình đã nói trước, có phân tích, có hướng xử lý.</div>
+  </section>
+
+  <section id="files">
+    <h2><span class="num">09</span>Tài liệu &amp; tái lập</h2>
+    <ul class="files">
+      <li><b>Luận văn (đã vá):</b> <code>D:\Download\Thesis_patched.docx</code> + PDF cùng chỗ — sạch template Y khoa, số cuối, bảng mới. Còn 2 việc tay: dán 2 ảnh vào chỗ <i>[Insert figure...]</i> mục 3.3.2 (lấy từ <code>runs/viz_detect/</code> trên Lightning) và rà References.</li>
+      <li><b>Chương Kết quả (nguồn):</b> <code>Test/KETQUA_LUANVAN.md</code> + bản trình chiếu <code>Test/ketqua_luanvan.html</code></li>
+      <li><b>Repo tái lập:</b> <code>github.com/nguyencongtuyen11/visdrone-p2</code> (nhánh <code>oneshot-rl</code>)</li>
+      <li><b>Scripts chính:</b> <code>eval_coco_map.py</code> (mAP COCO + recall 1-1, có calibration) · <code>eval_budget_sweep.py</code> (bảng K) · <code>make_crops.py</code> (train-on-crop) · <code>viz_detect.py</code> (ảnh demo ROI đỏ + detection) · <code>benchmark_oneshot.py</code> (tốc độ)</li>
+      <li><b>Model:</b> detector crop-FT <code>runs/detect/ft_crop/weights/best.pt</code> · agent <code>runs/ft_rl_small/dqn/best.pt</code></li>
+      <li><b>Ảnh demo:</b> <code>runs/viz_detect/</code> (RL-SAHI + ROI đỏ) · <code>runs/viz/</code> (so sánh one-shot vs di chuyển)</li>
+    </ul>
+    <p class="note">Ghi chú thước đo: mọi số mAP trong trang này là COCO chuẩn (conf 0.001). Các báo cáo cũ dùng protocol conf 0.10 (recall .497, mAP .357...) đã được thay thế — đừng trộn hai bộ số.</p>
+  </section>
+</div>

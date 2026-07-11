@@ -48,6 +48,7 @@ ap.add_argument("--no-roi", action="store_true", help="an ROI do (chi ve detecti
 ap.add_argument("--show-grid", action="store_true", help="ve them luoi tho (mac dinh CHI ve lat RL cho sach)")
 ap.add_argument("--rescue", action="store_true", help="CHE DO CHUNG MINH RL KHON: to VANG vat chi lat RL bat duoc (full+luoi sot)")
 ap.add_argument("--min-rescue", type=int, default=0, help="chi luu anh co >= N vat RL cuu (nhat anh dep cho slide)")
+ap.add_argument("--vs-full", action="store_true", help="rescue so voi YOLO THUAN (dramatic hon) thay vi so voi luoi")
 ap.add_argument("--out-width", type=int, default=0, help=">0: thu nho anh ra de tiet kiem dia")
 ap.add_argument("--jpg-quality", type=int, default=90)
 ap.add_argument("--device", default="cuda")
@@ -214,7 +215,10 @@ for idx, img in enumerate(images):
         coarse = _fixed_grid_rois(det.image_shape, 0.6, 0.15)
         fine = select_rois_moving(det)
         cp = crop_parts(img, coarse); fp = crop_parts(img, fine)
-        base = _merge_predictions(det.image_shape, 0.5, [fb, *cp[0]], [fs, *cp[1]], [fc, *cp[2]])       # full + LUOI (khong RL)
+        if args.vs_full:
+            base = (fb, fs, fc)                                                                          # YOLO THUAN
+        else:
+            base = _merge_predictions(det.image_shape, 0.5, [fb, *cp[0]], [fs, *cp[1]], [fc, *cp[2]])   # full + LUOI (khong RL)
         rl = _merge_predictions(det.image_shape, 0.5, [fb, *cp[0], *fp[0]], [fs, *cp[1], *fp[1]], [fc, *cp[2], *fp[2]])  # + lat RL
         rb, rs, rc = rl
         resc = _not_in(rb, rc, base[0], base[2])          # vat trong rl KHONG co trong base => CHI RL bat
@@ -239,7 +243,8 @@ for idx, img in enumerate(images):
             x0, y0, x1, y1 = [int(round(float(v))) for v in r]
             cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(2, W // 320))
         legend_rescue(im)
-        banner(im, f"RL cat dung cho -> CUU {n_resc} vat THAT ma full+luoi deu sot | {len(fine)} vung RL")
+        _vs = "YOLO thuan" if args.vs_full else "full+luoi"
+        banner(im, f"RL cat dung cho -> CUU {n_resc} vat THAT ma {_vs} deu sot | {len(fine)} vung RL")
     else:
         if args.method == "full":
             b, s, c = fb, fs, fc

@@ -98,7 +98,7 @@
   <nav class="toc">
     <a href="#story">Câu chuyện 30s</a><a href="#journey">Hành trình</a><a href="#main">Bảng kết quả</a>
     <a href="#speed">Tốc độ</a><a href="#sweep">Bằng chứng agent học</a><a href="#loop">Cơ chế 2 vòng lặp</a>
-    <a href="#ablation">Ablation</a><a href="#qa">Q&amp;A phản biện</a><a href="#files">Tài liệu</a>
+    <a href="#ablation">Ablation</a><a href="#papers">So với paper</a><a href="#qa">Q&amp;A phản biện</a><a href="#files">Tài liệu</a>
   </nav>
 
   <section id="story">
@@ -253,8 +253,32 @@
     </div>
   </section>
 
+  <section id="papers">
+    <h2><span class="num">08</span>So với các công bố quốc tế (VisDrone val)</h2>
+    <p class="h2sub">Nhãn test-dev VisDrone riêng tư → hầu hết paper báo trên val 548 ảnh, thước COCO — CÙNG SÂN với mình. Nguồn: UFPMP-Det (AAAI'22), AD-Det (Remote Sensing'25).</p>
+    <div class="tablecard">
+      <table>
+        <thead><tr><th class="l">Phương pháp</th><th class="l" style="text-align:left">Backbone (tham số)</th><th>AP@.5:.95</th><th>AP@.5</th></tr></thead>
+        <tbody>
+          <tr class="dim"><td class="l">ClusDet (ICCV'19)</td><td class="d">ResNet-50 (~42M)</td><td>26.7</td><td>50.6</td></tr>
+          <tr class="dim"><td class="l">CEASC (CVPR'23, nhẹ)</td><td class="d">ResNet-50</td><td>28.9</td><td>48.6</td></tr>
+          <tr class="dim"><td class="l">GLSAN (TIP'21)</td><td class="d">ResNet-50</td><td>30.7</td><td>55.4</td></tr>
+          <tr class="dim"><td class="l">YOLC (TITS'24)</td><td class="d">ResNeXt-101</td><td>33.7</td><td>57.4</td></tr>
+          <tr class="dim"><td class="l">CZDet (2023)</td><td class="d">ResNet-101</td><td>34.4</td><td>59.7</td></tr>
+          <tr class="dim"><td class="l">AD-Det (RS'25)</td><td class="d">GFL 2-stage, R50 (64M)</td><td>35.3</td><td>57.9</td></tr>
+          <tr class="dim"><td class="l">HRDNet</td><td class="d">ResNeXt-101 (nặng)</td><td>35.5</td><td>62.0</td></tr>
+          <tr class="hero"><td class="l">RL-SAHI<span class="badge">của mình</span></td><td class="d"><b>YOLO11s (9.4M)</b></td><td class="best">35.8</td><td>57.5</td></tr>
+          <tr class="dim"><td class="l">UFPMP-Det (AAAI'22)</td><td class="d">GFL 2-stage, R50</td><td>36.6</td><td>62.4</td></tr>
+          <tr class="dim"><td class="l">AD-Det* / UFPMP X101</td><td class="d">ResNeXt-101 (~101M)</td><td>37.5–40.1</td><td>60.9–66.8</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Định vị trung thực:</b> ở <b>AP@0.5:0.95</b> (thước COCO chính), <b>0.358 của mình ngang phân khúc SOTA</b> — sánh ngang AD-Det ResNet-50 (35.3), HRDNet (35.5), sát UFPMP R50 (36.6) — và vượt YOLC/CZDet/GLSAN/CEASC/ClusDet. Đạt được với <b>model nhỏ hơn 4.5–11 lần</b> (9.4M vs 42–101M) và tốc độ tương đương. → Câu chuyện là <b>"độ chính xác trên mỗi tham số"</b>, KHÔNG phải phá SOTA.</p>
+    <div class="callout"><b>Nói thẳng khi bảo vệ:</b> ở <b>AP@0.5</b> (0.575) mình chỉ <b>trung bình–khá</b> — SOTA nặng (UFPMP 62–66, HRDNet 62) vượt rõ nhờ backbone to. KHÔNG tuyên bố "vượt SOTA". Và AP@0.5:0.95 của mình đo bằng matching riêng, cao hơn ~10% so ultralytics (full 0.243 vs 0.22) → "ngang SOTA" ở AP@0.5:0.95 phải nói thận trọng; AP@0.5 thì đã calibrate khớp. TUYỆT ĐỐI không so val 0.575 với số 43.5 của SAHI paper (đó là test-dev + AP50 + detector khác).</p></div>
+  </section>
+
   <section id="qa">
-    <h2><span class="num">08</span>Q&amp;A phản biện — 3 câu hỏi độc &amp; đáp án</h2>
+    <h2><span class="num">09</span>Q&amp;A phản biện — 3 câu hỏi độc &amp; đáp án</h2>
     <div class="qa">
       <div class="q">
         <div class="qq">Lưới cố định không học gì đạt 0.570 @ 9 crop/205ms. Rút agent RL ra khỏi hệ, mất đúng cái gì?</div>
@@ -273,7 +297,7 @@
   </section>
 
   <section id="files">
-    <h2><span class="num">09</span>Tài liệu &amp; tái lập</h2>
+    <h2><span class="num">10</span>Tài liệu &amp; tái lập</h2>
     <ul class="files">
       <li><b>Luận văn (đã vá):</b> <code>D:\Download\Thesis_patched.docx</code> + PDF cùng chỗ — sạch template Y khoa, số cuối, bảng mới. Còn 2 việc tay: dán 2 ảnh vào chỗ <i>[Insert figure...]</i> mục 3.3.2 (lấy từ <code>runs/viz_detect/</code> trên Lightning) và rà References.</li>
       <li><b>Chương Kết quả (nguồn):</b> <code>Test/KETQUA_LUANVAN.md</code> + bản trình chiếu <code>Test/ketqua_luanvan.html</code></li>

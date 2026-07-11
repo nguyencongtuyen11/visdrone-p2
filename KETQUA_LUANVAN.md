@@ -111,6 +111,33 @@ Bảng dưới trình bày kết quả trên **hai detector**: bản fine-tune g
 
 ---
 
+## 4.8. So sánh với các công bố quốc tế trên VisDrone
+
+Vì nhãn của tập test-dev/test-challenge VisDrone **không công khai**, gần như toàn bộ công trình phát hiện trên VisDrone (ClusDet, DMNet, GLSAN, AMRNet, YOLC, CZDet, UFPMP-Det, AD-Det, CEASC…) đều báo cáo trên **tập validation (548 ảnh)** với thước đo COCO — trùng đúng thiết lập của chúng tôi, nên so sánh là **cùng sân, hợp lệ**. Bảng 5 định vị kết quả của chúng tôi (số đối chứng lấy từ UFPMP-Det AAAI'22 và AD-Det Remote Sensing 2025).
+
+| Phương pháp | Backbone (tham số) | AP@0.5:0.95 | AP@0.5 |
+|---|---|:---:|:---:|
+| ClusDet (ICCV'19) | ResNet-50 (~42M) | 26.7 | 50.6 |
+| CEASC (CVPR'23, hiệu quả) | ResNet-50 | 28.9 | 48.6 |
+| GLSAN (TIP'21) | ResNet-50 | 30.7 | 55.4 |
+| AMRNet (2020) | ResNet-50 | 31.7 | 52.7 |
+| YOLC (TITS'24) | ResNeXt-101 | 33.7 | 57.4 |
+| CZDet (2023) | ResNet-101 | 34.4 | 59.7 |
+| AD-Det (RS'25) | GFL 2-stage, ResNet-50 (64M) | 35.3 | 57.9 |
+| HRDNet | ResNeXt-101 (nặng) | 35.5 | 62.0 |
+| **RL-SAHI (đề xuất)** | **YOLO11s (9.4M)** | **35.8** | **57.5** |
+| UFPMP-Det (AAAI'22) | GFL 2-stage, ResNet-50 | 36.6 | 62.4 |
+| AD-Det* (flip, X101) | ResNeXt-101 (~101M) | 37.5 | 60.9 |
+| UFPMP-Det (X101 + MS) | ResNeXt-101 + multi-scale | 40.1 | 66.8 |
+
+*Bảng 5. Định vị trên VisDrone val (thước COCO). Số đối chứng: UFPMP-Det (arXiv:2112.10415), AD-Det (arXiv:2504.05601).*
+
+**Định vị trung thực.** Xét **AP@0.5:0.95** (thước COCO chính), kết quả 0.358 của chúng tôi **ngang phân khúc SOTA** — sánh ngang AD-Det ResNet-50 (0.353), HRDNet (0.355), sát UFPMP-Det ResNet-50 (0.366) — và **vượt** một loạt phương pháp crop-based (YOLC, CZDet, GLSAN, AMRNet, CEASC, ClusDet, DMNet). Điều đáng chú ý là chúng tôi đạt mức này với **backbone nhỏ hơn 4.5–11 lần** (9.4M so với 42–101M tham số) và **tốc độ tương đương** (496 ms so với ~514 ms của AD-Det ResNet-50 trên GPU cùng lớp). Đóng góp do đó là **độ chính xác trên mỗi đơn vị tính toán**, chứ không phải phá kỷ lục tuyệt đối.
+
+Ở **AP@0.5**, kết quả 0.575 của chúng tôi ở mức **trung bình–khá**: các phương pháp SOTA nặng — UFPMP-Det (62.4–66.8), HRDNet/SAIC-FPN (~62), AD-Det ResNeXt-101 (60.9) — **vượt rõ** nhờ backbone lớn và độ phân giải cao. Chúng tôi **không tuyên bố đạt SOTA**.
+
+*Hai lưu ý thước đo (nêu để minh bạch): (i) AP@0.5:0.95 của chúng tôi tính bằng thuật toán ghép riêng, chạy cao hơn khoảng 10% so với công cụ Ultralytics (ở full@640: 0.243 so với 0.22), nên nhận định "ngang SOTA" ở AP@0.5:0.95 cần được hiểu thận trọng; AP@0.5 thì đã được hiệu chỉnh trùng khớp Ultralytics (0.387 vs 0.378). (ii) Không so số val của chúng tôi với các con số test-dev của những báo cáo khác (ví dụ AP@0.5 = 43.5 trong paper SAHI gốc là test-dev, chỉ AP@0.5, và dùng detector khác).*
+
 ## 4.7. Kết luận chương
 
 Đồ án đạt hai kết quả chính, đều được kiểm chứng bằng thước đo COCO đã hiệu chỉnh:

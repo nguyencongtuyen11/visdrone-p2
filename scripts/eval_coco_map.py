@@ -22,7 +22,7 @@ from rl_sahi.common.config import load_default_config
 from rl_sahi.common.class_mapping import ClassMapping
 from rl_sahi.common.device import resolve_torch_device
 from rl_sahi.common.data import iter_images, image_to_label_path, read_yolo_labels
-from rl_sahi.common.boxes import iou_matrix
+from rl_sahi.common.boxes import area, iou_matrix
 from rl_sahi.detection.yolo import load_yolo
 from rl_sahi.inference.config import InferenceConfig
 from rl_sahi.inference.crops import run_yolo_on_crops
@@ -39,6 +39,8 @@ ap.add_argument("--policy", type=Path, default=ROOT / "runs" / "oneshot" / "poli
 ap.add_argument("--split", default="test")
 ap.add_argument("--limit", type=int, default=0, help="0 = het anh")
 ap.add_argument("--map-conf", type=float, default=0.001, help="conf THAP de duong PR day du (nhu ultralytics)")
+ap.add_argument("--op-conf", type=float, default=0.25, help="operating point cho small-recall (ghep 1-1)")
+ap.add_argument("--small-pct", type=float, default=40.0, help="percentile dien tich GT lam nguong vat nho")
 ap.add_argument("--base", type=int, default=640)
 ap.add_argument("--slice", type=int, default=640)
 ap.add_argument("--max-fine", type=int, default=8)
@@ -168,6 +170,35 @@ def eval_map(preds, gts):
     map5095 = float(np.nanmean(ap))
     return map50, map5095, ap[:, 0]
 
+def small_recall(preds, gts, small_thr, op_conf):
+    """Recall vat nho, GHEP 1-1 greedy theo score, class-aware, IoU>=0.5 (metric giong eval_budget_sweep)."""
+    hit = tot = 0
+    for iid, (gb, gc) in gts.items():
+        if not len(gb):
+            continue
+        sm = area(gb) <= small_thr
+        tot += int(sm.sum())
+        if not sm.any():
+            continue
+        pb, ps, pc = preds[iid]
+        keep = ps >= op_conf
+        pb, ps, pc = pb[keep], ps[keep], pc[keep]
+        if not len(pb):
+            continue
+        order = np.argsort(-ps)
+        matched = np.zeros(len(gb), bool)
+        for i in order:
+            same = gc.astype(np.int64) == int(pc[i])
+            cand = np.flatnonzero(same & ~matched)
+            if not len(cand):
+                continue
+            ious = iou_matrix(pb[i].reshape(1, 4), gb[cand])[0]
+            j = int(ious.argmax())
+            if float(ious[j]) >= 0.5:
+                matched[cand[j]] = True
+        hit += int((matched & sm).sum())
+    return hit / max(tot, 1)
+
 # ---------------- chay ----------------
 images = iter_images(IR, split=args.split, limit=(args.limit or None))
 if not images: sys.exit(f"[coco] khong thay anh o {IR}/{args.split}")
@@ -220,16 +251,21 @@ for idx, img in enumerate(images):
                 if roi is not None: rois.append(roi)
         P["oneshot"][iid] = merge_full(shape, full, crop_parts(img, rois)) if rois else full
 
+all_gt_areas = [area(gb) for (gb, _gc) in gts.values() if len(gb)]
+small_thr = float(np.percentile(np.concatenate(all_gt_areas), args.small_pct)) if all_gt_areas else 1e9
+
 print(f"\n===== COCO mAP (split={args.split}, {len(images)} anh, conf={MC}) =====")
-print(f"  {'method':16s}{'mAP50':>9s}{'mAP50-95':>10s}")
+print(f"  {'method':20s}{'mAP50':>9s}{'mAP50-95':>10s}{'s_recall@'+format(args.op_conf,'.2f'):>14s}")
 order = [("full", "YOLO full@640"), ("sahi", "SAHI"), ("coarse", "luoi 0.6 (khong RL)"),
          ("rl_move", "RL di chuyen"), ("oneshot", "one-shot")]
 map50_full = None
 for key, name in order:
     if not P[key]: continue
     m50, m5095, per = eval_map(P[key], gts)
+    sr = small_recall(P[key], gts, small_thr, args.op_conf)
     if key == "full": map50_full = m50; per_full = per
-    print(f"  {name:16s}{m50:9.4f}{m5095:10.4f}")
+    print(f"  {name:20s}{m50:9.4f}{m5095:10.4f}{sr:14.4f}")
+print(f"  (s_recall = recall vat nho GHEP 1-1, GT <= p{args.small_pct:.0f} dien tich, op conf {args.op_conf})")
 print(f"\n  [CALIBRATION] full@640 mAP50 = {map50_full:.4f}  — PHAI ~ ultralytics `yolo val split={args.split}` (val 548 = 0.378)")
 print("  Neu khop -> thuoc do dung -> so SAHI/RL o tren la COCO mAP that, so voi paper duoc.")
 print("\n  full@640 per-class mAP50:")

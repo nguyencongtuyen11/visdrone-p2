@@ -35,6 +35,7 @@ ap.add_argument("--checkpoint", type=Path, default=ROOT / "runs" / "ft_rl" / "dq
 ap.add_argument("--method", choices=["rl", "coarse", "full"], default="rl")
 ap.add_argument("--split", default="test")
 ap.add_argument("--limit", type=int, default=60)
+ap.add_argument("--offset", type=int, default=0, help="bo qua N anh dau -> lay bo anh KHAC")
 ap.add_argument("--conf", type=float, default=0.25, help="nguong hien thi (cao = it box nhieu, sach hon)")
 ap.add_argument("--base", type=int, default=640)
 ap.add_argument("--slice", type=int, default=640)
@@ -136,10 +137,45 @@ def banner(im, text):
     cv2.putText(im, text, (8, 16), FONT, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
 
 args.out.mkdir(parents=True, exist_ok=True)
-images = iter_images(IR, split=args.split, limit=(args.limit or None))
-if not images: sys.exit(f"[viz] khong thay anh o {IR}/{args.split}")
+_all = iter_images(IR, split=args.split, limit=((args.offset + args.limit) if args.limit else None))
+images = _all[args.offset:]
+if not images: sys.exit(f"[viz] khong thay anh o {IR}/{args.split} (offset={args.offset})")
 mname = {"rl": "RL-SAHI (crop)", "coarse": "luoi 0.6 (crop)", "full": "YOLO full (crop)"}[args.method]
-print(f"[viz] {len(images)} anh | method={args.method} | conf={CONF} | weight={args.weights.name}")
+print(f"[viz] {len(images)} anh (offset {args.offset}) | method={args.method} | conf={CONF} | weight={args.weights.name}")
+
+# --- Tu ghi file GIAI THICH vao folder de nguoi khac xem khoi hieu lam ROI ---
+_doc = f"""GIAI THICH ANH TRONG FOLDER NAY  (method: {mname})
+=====================================================================
+CACH DOC 1 ANH:
+  - HOP MAU (xanh la / cam / xanh duong ... theo lop) = VAT THE PHAT HIEN DUOC
+    (ket qua cuoi cung sau khi gop). Goc trai co bang chu giai mau theo lop.
+  - HOP DO (ROI) = VUNG MA AGENT RL CHON DE CAT LAT. DAY KHONG PHAI box phat hien!
+  - Tieu de tren cung: ten method | so vat the | so vung RL + so o luoi.
+
+VI SAO ROI DO KHONG "SAI" DU NHIN CO VE TO / CHONG / KHONG OM KHIT VAT:
+  1. ROI la CUA SO DE CAT, khong phai hop bao vat. Muc dich: cat vung do ra,
+     phong to (resize ve 640) roi chay YOLO lai o do phan giai cao hon -> bat
+     duoc vat NHO ma anh full@640 bo sot. Nen ROI chi can TRUM vung co vat nho,
+     KHONG can om khit tung vat.
+  2. Kich thuoc ROI bi rang buoc = 10-35% canh anh (khong gian hanh dong cua
+     agent). Do la thiet ke, khong phai chon tuy tien.
+  3. ROI chum vao cum vat nho DAY (noi objectness cao) la DUNG hanh vi: do la
+     cho anh full de bo sot nhat. Cac ROI co the chong nhau chut khi nhieu cum
+     gan nhau (luat chong lan chi chan trung y het, khong chan chum).
+  4. Tinh toan cuoi: full@640 + cac crop tu ROI + luoi tho -> gop bang class-aware
+     NMS -> ra hop mau. Vi vay "vat the" (mau) va "vung cat" (do) la HAI thu khac
+     nhau, dung danh gia ROI bang viec no co khit vat hay khong.
+  5. Vi tri ROI la HOC DUOC, khong ngau nhien: thi nghiem budget sweep chung minh
+     agent dat ROI TOT HON topK-objectness / center / random o MOI ngan sach crop
+     (+0.02..0.04 mAP, recall vat nho hon toi +0.12). Xem KETQUA_LUANVAN.md muc 4.5.
+
+TOM LAI: hop DO = "nhin o dau" (quyet dinh cua agent), hop MAU = "thay gi"
+(ket qua). ROI khong sai — no la cach pipeline tinh toan.
+"""
+try:
+    (args.out / "GIAI_THICH_ROI.txt").write_text(_doc, encoding="utf-8")
+except Exception:
+    pass
 
 for idx, img in enumerate(images):
     if idx % 20 == 0 and idx:

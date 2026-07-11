@@ -70,7 +70,7 @@ Bảng dưới trình bày kết quả trên **hai detector**: bản fine-tune g
 
 → **RL-SAHI vừa chính xác hơn (0.575 vs 0.539) vừa nhanh hơn SAHI (496 vs 542 ms)** — nếu không nhanh và tốt hơn SAHI thì không có lý do dùng RL; điều kiện này **đạt**.
 
-**Recall.** Ở điểm vận hành, RL-SAHI cho **recall vật nhỏ cao nhất (0.497)** so với SAHI (0.457) và lưới (0.394) — phù hợp bài toán ưu tiên "bắt hết vật nhỏ".
+**Recall (ghép 1-1, val, ngưỡng vận hành conf 0.25).** RL-SAHI đạt **recall vật nhỏ 0.605 — cao nhất**: hơn lưới 0.6 **+0.041** và hơn SAHI **+0.055**, dù dùng **ít crop hơn SAHI 40%** (16.6 so với 27.6). Đáng chú ý, SAHI với 27.6 lát có recall *thấp hơn* lưới 9 lát (0.550 so với 0.564) — nghĩa là recall cao hơn của RL-SAHI **không đến từ việc chạy nhiều crop hơn**, mà từ việc lát RL nhắm trúng vật nhỏ lưới bỏ sót. Chi phí đổi lại gần bằng không (mAP@0.5:0.95 −0.001).
 
 **Hành vi ROI học được (thành quả của agent).** Sau khi huấn luyện với phần thưởng nhắm vật nhỏ và phạt chồng lấn, agent học cách **rê ROI tới các cụm vật nhỏ dày và trải đều** thay vì dồn vào một điểm nóng. Hình minh họa (Phụ lục) cho thấy các ROI đỏ rơi vào cụm phương tiện nhỏ mà lưới/full dễ bỏ sót — đây là biểu diễn trực quan, diễn giải được của chính sách đã học.
 
@@ -78,7 +78,7 @@ Bảng dưới trình bày kết quả trên **hai detector**: bản fine-tune g
 
 ## 4.5. Phân tích bổ sung (ablation)
 
-**(a) Đóng góp thuần của RL so với lưới thô.** So `RL-SAHI` với `lưới 0.6` (cùng cấu hình, bỏ phần RL): RL cao hơn **+0.004…0.005 mAP@0.5**. Nghĩa là lát RL bổ sung một phần nhỏ trên nền lưới thô đã rất mạnh.
+**(a) Đóng góp thuần của RL so với lưới thô.** So `RL-SAHI` với `lưới 0.6` (cùng cấu hình, bỏ phần RL): RL cao hơn **+0.004…0.005 mAP@0.5** nhưng **+0.041 recall vật nhỏ** (0.605 so với 0.564, ghép 1-1). Lát RL mua thêm recall trên nền lưới với chi phí mAP gần bằng không.
 
 **(a′) Kiểm chứng "agent biết nhìn đâu" — so sánh theo ngân sách (budget sweep).** Để tách riêng chất lượng *đặt lát* khỏi mọi yếu tố khác, cố định **cùng kích cỡ lát (fraction 0.30)** và **cùng số lát K**, chỉ thay đổi *cách chọn vị trí*: chính sách RL, heuristic đỉnh objectness (top-K), K ô gần tâm, và K ô ngẫu nhiên (3 seed):
 
@@ -116,7 +116,7 @@ Bảng dưới trình bày kết quả trên **hai detector**: bản fine-tune g
 Đồ án đạt hai kết quả chính, đều được kiểm chứng bằng thước đo COCO đã hiệu chỉnh:
 
 - **Train-on-crop** là điều kiện then chốt để cắt lát phát huy, nâng mAP các phương pháp cắt lát tới **+0.15** và cải thiện đúng các lớp vật nhỏ.
-- **RL-SAHI** (agent RL rê ROI, batch hóa) đạt **mAP cao nhất (0.575)**, **nhanh hơn SAHI (496 ms)**, và chính sách đặt lát học được **vượt mọi heuristic đặt-lát (top-K objectness / center / random) ở mọi ngân sách crop khi so cùng kích cỡ lát** (+0.02…+0.04 mAP@0.5) — vị trí ROI là thành quả học được, có bằng chứng định lượng.
+- **RL-SAHI** (agent RL rê ROI, batch hóa) đạt **mAP cao nhất (0.575)**, **recall vật nhỏ cao nhất (0.605, ghép 1-1; +0.041 so lưới)**, **nhanh hơn SAHI (496 ms)**, và chính sách đặt lát học được **vượt mọi heuristic đặt-lát (top-K objectness / center / random) ở mọi ngân sách crop khi so cùng kích cỡ lát** (+0.02…+0.04 mAP@0.5) — vị trí ROI là thành quả học được, có bằng chứng định lượng.
 
 So với YOLO nền (0.394), pipeline hoàn chỉnh nâng lên **0.575 mAP@0.5** — một kết quả cạnh tranh, đạt được một cách trung thực và có phân tích ablation đầy đủ.
 

@@ -64,7 +64,7 @@
   <div class="kpis">
     <div class="kpi"><div class="v">0.575</div><div class="k">mAP@0.5 — RL-SAHI (tốt nhất)</div></div>
     <div class="kpi"><div class="v">496ms</div><div class="k">nhanh hơn SAHI (542ms)</div></div>
-    <div class="kpi"><div class="v">0.497</div><div class="k">recall vật nhỏ (cao nhất)</div></div>
+    <div class="kpi"><div class="v">0.605</div><div class="k">recall vật nhỏ, ghép 1-1 (cao nhất)</div></div>
     <div class="kpi"><div class="v">+0.181</div><div class="k">mAP so với YOLO nền</div></div>
   </div>
 
@@ -120,7 +120,7 @@
     <ul>
       <li><b>Chất lượng:</b> mAP@0.5 = 0.575 (cao nhất), vượt SAHI +0.036, vượt YOLO nền +0.181.</li>
       <li><b>Tốc độ (T4, test 1610):</b> batch hóa suy luận crop đưa RL từ 1370ms → <b>496ms</b>, <b>nhanh hơn SAHI (542ms)</b> mà chất lượng giữ nguyên.</li>
-      <li><b>Recall:</b> recall vật nhỏ <b>0.497 — cao nhất</b> (SAHI 0.457, lưới 0.394).</li>
+      <li><b>Recall (ghép 1-1, conf 0.25):</b> recall vật nhỏ <b>0.605 — cao nhất</b>: hơn lưới +0.041, hơn SAHI +0.055 dù ít crop hơn SAHI 40%. SAHI 27.6 lát còn <i>thua</i> lưới 9 lát (0.550 vs 0.564) → recall của RL không đến từ "nhiều crop hơn" mà từ lát nhắm trúng chỗ lưới sót; chi phí mAP@0.5:0.95 chỉ −0.001.</li>
       <li><b>Chính sách ROI học được:</b> sau khi thưởng nhắm vật nhỏ + phạt chồng, agent học <b>rê ROI tới cụm vật nhỏ và trải đều</b> — biểu diễn trực quan, diễn giải được của policy.</li>
     </ul>
     <div class="callout"><b>Điều kiện "đáng dùng RL":</b> RL-SAHI vừa chính xác hơn (0.575 vs 0.539) vừa nhanh hơn SAHI (496 vs 542ms) — nếu không, thà dùng SAHI. Điều kiện này <b>đạt</b>.</div>
@@ -129,7 +129,8 @@
   <section>
     <h2><span class="num">4.5</span>Phân tích ablation</h2>
     <ul>
-      <li><b>RL vs lưới thô:</b> RL cao hơn +0.004–0.005 mAP@0.5 → lát RL bổ sung phần nhỏ trên nền lưới đã mạnh.</li>
+      <li><b>RL vs lưới thô:</b> +0.004–0.005 mAP@0.5 nhưng <b>+0.041 recall vật nhỏ</b> — lát RL mua recall trên nền lưới với chi phí mAP ~0.</li>
+      <li><b>Budget sweep (cùng scale 0.30, cùng K):</b> chính sách RL <b>thắng top-K objectness / center / random ở MỌI K=2–8</b> (+0.02…+0.04 mAP@0.5; recall hơn tới +0.12) — vị trí ROI là <b>thành quả học được</b>, không tái tạo bằng heuristic. Ô 0.6 vẫn hơn lát 0.30 cùng K (coverage &gt; zoom) — agent bị giới hạn lát ≤0.35, lý giải vì sao hybrid là cấu hình tốt nhất.</li>
       <li><b>Mức zoom:</b> policy chọn zoom <b>0%</b> (oracle 4.4%) → detector cố định không hưởng lợi từ phóng đại thêm (kết quả phủ định trung thực).</li>
       <li><b>Thưởng nhắm vật nhỏ:</b> cải thiện rõ hành vi ROI (trải đều, trúng cụm nhỏ, lát giảm 8→2–6) nhưng mAP không đổi so lưới → trần do lưới phủ rộng, không phải huấn luyện chưa đủ.</li>
     </ul>
@@ -143,7 +144,7 @@
 
   <section>
     <h2><span class="num">4.7</span>Kết luận chương</h2>
-    <p><b>Train-on-crop</b> là điều kiện then chốt để cắt lát phát huy (nâng tới +0.15 mAP, cải thiện lớp nhỏ). <b>RL-SAHI</b> đạt <b>mAP cao nhất (0.575)</b>, <b>nhanh hơn SAHI (496ms)</b>, <b>recall cao nhất (0.497)</b>, với chính sách ROI học được biết trải vào cụm vật nhỏ. So YOLO nền (0.394), pipeline hoàn chỉnh nâng lên <b>0.575 mAP@0.5</b> — kết quả cạnh tranh, đạt được trung thực và có ablation đầy đủ.</p>
+    <p><b>Train-on-crop</b> là điều kiện then chốt để cắt lát phát huy (nâng tới +0.15 mAP, cải thiện lớp nhỏ). <b>RL-SAHI</b> đạt <b>mAP cao nhất (0.575)</b>, <b>recall vật nhỏ cao nhất (0.605, +0.041 so lưới)</b>, <b>nhanh hơn SAHI (496ms)</b>, và chính sách đặt lát <b>vượt mọi heuristic ở mọi ngân sách crop</b> (budget sweep). So YOLO nền (0.394), pipeline hoàn chỉnh nâng lên <b>0.575 mAP@0.5</b> — kết quả cạnh tranh, đạt được trung thực và có ablation đầy đủ.</p>
     <p class="foot">Tái lập: <code>eval_coco_map.py</code> (mAP), <code>benchmark_oneshot.py</code> (tốc độ), <code>viz_detect.py</code> (ROI), <code>make_crops.py</code> (train-on-crop), <code>ft_rl_small.yaml</code> (agent nhắm vật nhỏ).</p>
   </section>
 </div>

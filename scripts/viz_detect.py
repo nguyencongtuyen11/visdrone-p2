@@ -20,11 +20,12 @@ import numpy as np, torch, cv2
 from rl_sahi.common.config import load_default_config
 from rl_sahi.common.class_mapping import ClassMapping
 from rl_sahi.common.device import resolve_torch_device
-from rl_sahi.common.data import iter_images
+from rl_sahi.common.data import iter_images, image_to_label_path, read_yolo_labels
 from rl_sahi.detection.yolo import load_yolo
 from rl_sahi.eval.benchmark import _fixed_grid_rois, _full_predictions, _merge_predictions, _image_shape
 from rl_sahi.inference.config import InferenceConfig
 from rl_sahi.inference.crops import run_yolo_on_crops
+from rl_sahi.common.boxes import iou_matrix
 from rl_sahi.inference.pipeline import _filter_classes, _attempt_overlap, get_initial_detection
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,6 +46,8 @@ ap.add_argument("--chunk", type=int, default=16)
 ap.add_argument("--labels", action="store_true", help="ghi ten lop + conf tren moi box (dong dac thi roi)")
 ap.add_argument("--no-roi", action="store_true", help="an ROI do (chi ve detection)")
 ap.add_argument("--show-grid", action="store_true", help="ve them luoi tho (mac dinh CHI ve lat RL cho sach)")
+ap.add_argument("--rescue", action="store_true", help="CHE DO CHUNG MINH RL KHON: to VANG vat chi lat RL bat duoc (full+luoi sot)")
+ap.add_argument("--min-rescue", type=int, default=0, help="chi luu anh co >= N vat RL cuu (nhat anh dep cho slide)")
 ap.add_argument("--out-width", type=int, default=0, help=">0: thu nho anh ra de tiet kiem dia")
 ap.add_argument("--jpg-quality", type=int, default=90)
 ap.add_argument("--device", default="cuda")
@@ -131,6 +134,24 @@ def legend(im):
     cv2.rectangle(im, (x, y), (x + 14, y + 14), (0, 0, 255), 2)
     cv2.putText(im, "vung cat (ROI)", (x + 18, y + 12), FONT, 0.42, (255, 255, 255), 1, cv2.LINE_AA)
 
+def _not_in(b1, c1, b0, c0):
+    """Mask: box trong (b1,c1) KHONG khop box nao cung lop trong (b0,c0) o IoU>=0.5 -> vat MOI."""
+    b1 = np.asarray(b1, np.float32).reshape(-1, 4); c1 = np.asarray(c1).reshape(-1)
+    if len(b1) == 0: return np.zeros(0, bool)
+    if len(b0) == 0: return np.ones(len(b1), bool)
+    iou = iou_matrix(b1, np.asarray(b0, np.float32).reshape(-1, 4))
+    same = c1[:, None] == np.asarray(c0).reshape(1, -1)
+    return ~((iou >= 0.5) & same).any(axis=1)
+
+def legend_rescue(im):
+    x, y = 8, 30
+    for col, txt in [((150, 150, 150), "da bat (full + luoi)"),
+                     ((0, 255, 255), "RL CUU THEM (full+luoi sot)"),
+                     ((0, 0, 255), "vung RL cat (ROI)")]:
+        cv2.rectangle(im, (x, y), (x + 14, y + 14), col, 2 if col == (0, 0, 255) else -1)
+        cv2.putText(im, txt, (x + 18, y + 12), FONT, 0.46, (255, 255, 255), 1, cv2.LINE_AA)
+        y += 20
+
 def banner(im, text):
     w = im.shape[1]
     cv2.rectangle(im, (0, 0), (w, 22), (0, 0, 0), -1)
@@ -188,24 +209,56 @@ for idx, img in enumerate(images):
         spatial_feature_channels=4, cache_root=CR, split=args.split, use_cache=False)
     fb, fs, fc = _full_predictions(det, icfg)
     fine, coarse = [], []
-    if args.method == "full":
-        b, s, c = fb, fs, fc
-    else:
+    if args.rescue:
+        # === CHE DO CHUNG MINH: vat CHI lat RL bat duoc (full + luoi deu sot) ===
         coarse = _fixed_grid_rois(det.image_shape, 0.6, 0.15)
-        fine = select_rois_moving(det) if args.method == "rl" else []
-        pb, ps, pc = crop_parts(img, fine + coarse)
-        b, s, c = _merge_predictions(det.image_shape, 0.5, [fb, *pb], [fs, *ps], [fc, *pc])
-    draw(im, b, s, c, th)
-    if not args.no_roi and args.method != "full":
-        if args.show_grid:    # luoi tho = ROI do MANH (mac dinh AN cho sach)
-            for r in coarse:
-                x0, y0, x1, y1 = [int(round(float(v))) for v in r]
-                cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(1, W // 1000))
-        for r in fine:        # lat RL = ROI do DAM (cai agent chon)
+        fine = select_rois_moving(det)
+        cp = crop_parts(img, coarse); fp = crop_parts(img, fine)
+        base = _merge_predictions(det.image_shape, 0.5, [fb, *cp[0]], [fs, *cp[1]], [fc, *cp[2]])       # full + LUOI (khong RL)
+        rl = _merge_predictions(det.image_shape, 0.5, [fb, *cp[0], *fp[0]], [fs, *cp[1], *fp[1]], [fc, *cp[2], *fp[2]])  # + lat RL
+        rb, rs, rc = rl
+        resc = _not_in(rb, rc, base[0], base[2])          # vat trong rl KHONG co trong base => CHI RL bat
+        # honest: chi tinh la "cuu" neu khop vat THAT (ground-truth) -> khong to nham false-positive
+        try:
+            gcls, gbox = read_yolo_labels(image_to_label_path(img, IR, LR), det.image_shape)
+            gcls = cm.map_label_classes(gcls)
+            is_real = ~_not_in(rb, rc, np.asarray(gbox, np.float32).reshape(-1, 4), gcls)
+            resc = resc & is_real
+        except Exception:
+            pass                                           # thieu nhan -> giu resc (unique-over-grid)
+        n_resc = int(resc.sum())
+        if n_resc < args.min_rescue:
+            continue                                       # bo anh it rescue -> chi giu anh dep
+        for bx in base[0]:                                 # nen: da bat boi full+luoi -> xam mong
+            x0, y0, x1, y1 = [int(round(float(v))) for v in bx]
+            cv2.rectangle(im, (x0, y0), (x1, y1), (150, 150, 150), max(1, W // 1100))
+        for bx in rb[resc]:                                # VANG DAM: RL cuu them
+            x0, y0, x1, y1 = [int(round(float(v))) for v in bx]
+            cv2.rectangle(im, (x0, y0), (x1, y1), (0, 255, 255), max(3, W // 240))
+        for r in fine:                                     # DO: vung RL cat
             x0, y0, x1, y1 = [int(round(float(v))) for v in r]
             cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(2, W // 320))
-    legend(im)
-    banner(im, f"{mname} | {len(b)} vat | {len(fine)} vung RL + {len(coarse)} luoi")
+        legend_rescue(im)
+        banner(im, f"RL cat dung cho -> CUU {n_resc} vat THAT ma full+luoi deu sot | {len(fine)} vung RL")
+    else:
+        if args.method == "full":
+            b, s, c = fb, fs, fc
+        else:
+            coarse = _fixed_grid_rois(det.image_shape, 0.6, 0.15)
+            fine = select_rois_moving(det) if args.method == "rl" else []
+            pb, ps, pc = crop_parts(img, fine + coarse)
+            b, s, c = _merge_predictions(det.image_shape, 0.5, [fb, *pb], [fs, *ps], [fc, *pc])
+        draw(im, b, s, c, th)
+        if not args.no_roi and args.method != "full":
+            if args.show_grid:    # luoi tho = ROI do MANH (mac dinh AN cho sach)
+                for r in coarse:
+                    x0, y0, x1, y1 = [int(round(float(v))) for v in r]
+                    cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(1, W // 1000))
+            for r in fine:        # lat RL = ROI do DAM (cai agent chon)
+                x0, y0, x1, y1 = [int(round(float(v))) for v in r]
+                cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(2, W // 320))
+        legend(im)
+        banner(im, f"{mname} | {len(b)} vat | {len(fine)} vung RL + {len(coarse)} luoi")
     if args.out_width and W > args.out_width:
         sc = args.out_width / W
         im = cv2.resize(im, (args.out_width, int(round(H * sc))), interpolation=cv2.INTER_AREA)

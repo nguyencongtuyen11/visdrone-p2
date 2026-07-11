@@ -80,6 +80,19 @@ Bảng dưới trình bày kết quả trên **hai detector**: bản fine-tune g
 
 **(a) Đóng góp thuần của RL so với lưới thô.** So `RL-SAHI` với `lưới 0.6` (cùng cấu hình, bỏ phần RL): RL cao hơn **+0.004…0.005 mAP@0.5**. Nghĩa là lát RL bổ sung một phần nhỏ trên nền lưới thô đã rất mạnh.
 
+**(a′) Kiểm chứng "agent biết nhìn đâu" — so sánh theo ngân sách (budget sweep).** Để tách riêng chất lượng *đặt lát* khỏi mọi yếu tố khác, cố định **cùng kích cỡ lát (fraction 0.30)** và **cùng số lát K**, chỉ thay đổi *cách chọn vị trí*: chính sách RL, heuristic đỉnh objectness (top-K), K ô gần tâm, và K ô ngẫu nhiên (3 seed):
+
+| K | **RL (agent)** | top-K objectness | center-K | random-K | recall nhỏ: RL vs top-K |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| 2 | **0.440** | 0.411 | 0.421 | 0.405 | **0.379** vs 0.263 |
+| 4 | **0.464** | 0.422 | 0.423 | 0.406 | **0.437** vs 0.309 |
+| 6 | **0.473** | 0.439 | 0.444 | 0.412 | **0.460** vs 0.359 |
+| 8 | **0.480** | 0.457 | 0.456 | 0.419 | **0.476** vs 0.407 |
+
+**Chính sách học được thắng mọi baseline đặt-lát ở mọi ngân sách** (+0.022…+0.042 mAP@0.5 so với heuristic mạnh nhất; recall vật nhỏ hơn tới +0.12). Đây là bằng chứng định lượng rằng vị trí ROI là **thành quả học được của agent**, không tái tạo được bằng heuristic tĩnh.
+
+**(a″) Kích cỡ lát quan trọng hơn vị trí (phát hiện kèm theo).** Cùng K, ô cỡ 0.6 (ít phóng đại, phủ rộng) vượt mọi phương án đặt lát cỡ 0.30 — kể cả RL (ví dụ K=4: ô-0.6 0.533 vs RL-0.30 0.464). Không gian hành động của agent giới hạn lát ≤ 0.35 nên nó không thể tự chọn cỡ 0.6; điều này lý giải vì sao cấu hình tốt nhất là **hybrid**: lưới 0.6 đảm nhiệm độ phủ, lát RL đảm nhiệm tinh chỉnh có chủ đích (0.575). Nới biên kích cỡ lát cho agent là công việc tương lai tự nhiên.
+
 **(b) Mức zoom.** Không gian hành động có hai mức phóng đại; chính sách học được **chọn zoom 0%** (đáp án tối ưu cũng chỉ ~4.4%). Kết luận: với detector cố định ở độ phân giải crop, **phóng đại thêm gần như không mang lại phát hiện mới** — một kết quả phủ định trung thực.
 
 **(c) Phần thưởng nhắm vật nhỏ.** Huấn luyện lại agent chỉ thưởng khi bắt vật nhỏ + phạt chồng mạnh **cải thiện rõ hành vi ROI** (trải đều, trúng cụm nhỏ, số lát giảm 8 → 2–6) nhưng **không thay đổi mAP so với lưới thô** — xác nhận trần chất lượng do lưới phủ rộng, không phải do huấn luyện chưa đủ.
@@ -103,7 +116,7 @@ Bảng dưới trình bày kết quả trên **hai detector**: bản fine-tune g
 Đồ án đạt hai kết quả chính, đều được kiểm chứng bằng thước đo COCO đã hiệu chỉnh:
 
 - **Train-on-crop** là điều kiện then chốt để cắt lát phát huy, nâng mAP các phương pháp cắt lát tới **+0.15** và cải thiện đúng các lớp vật nhỏ.
-- **RL-SAHI** (agent RL rê ROI, batch hóa) đạt **mAP cao nhất (0.575)**, **nhanh hơn SAHI (496 ms)**, **recall cao nhất (0.497)**, với **chính sách ROI học được** biết trải vào cụm vật nhỏ.
+- **RL-SAHI** (agent RL rê ROI, batch hóa) đạt **mAP cao nhất (0.575)**, **nhanh hơn SAHI (496 ms)**, và chính sách đặt lát học được **vượt mọi heuristic đặt-lát (top-K objectness / center / random) ở mọi ngân sách crop khi so cùng kích cỡ lát** (+0.02…+0.04 mAP@0.5) — vị trí ROI là thành quả học được, có bằng chứng định lượng.
 
 So với YOLO nền (0.394), pipeline hoàn chỉnh nâng lên **0.575 mAP@0.5** — một kết quả cạnh tranh, đạt được một cách trung thực và có phân tích ablation đầy đủ.
 

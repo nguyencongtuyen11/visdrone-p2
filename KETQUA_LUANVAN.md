@@ -90,6 +90,8 @@ Bảng dưới trình bày kết quả trên **hai detector**: bản fine-tune g
 
 1. **Baseline lưới thô rất cạnh tranh.** `lưới 0.6` (không RL) đạt 0.570 mAP@0.5, ngang RL-SAHI (0.575); ở mAP@0.5:0.95 lưới còn nhỉnh hơn chút. Do đó, **RL-SAHI vượt SAHI rõ nhưng chỉ ngang một baseline cắt-lát-thô được điều chỉnh tốt** về mAP. Giá trị riêng của RL nằm ở **tính thích ứng (chọn vùng theo nội dung ảnh), recall cao nhất, và chính sách ROI diễn giải được**, không phải một cú nhảy mAP so với lưới.
 
+   *Nguyên nhân cấu trúc (tự nhận diện):* trong quá trình huấn luyện, phần thưởng của agent được tính so với baseline **chỉ gồm YOLO toàn ảnh**, trong khi lúc triển khai agent hoạt động **cạnh lưới thô** — nghĩa là agent được thưởng cả khi tìm lại vật mà lưới đằng nào cũng phát hiện. Biên lợi ~+0.005 so với lưới vì vậy là **hệ quả của phát biểu bài toán**, không phải do huấn luyện chưa đủ; hướng khắc phục (đưa phát hiện của lưới vào baseline phần thưởng — "học bổ khuyết lưới") được ghi nhận là công việc tương lai, với trần cải thiện ước lượng khiêm tốn (+0.01–0.02) do lưới đã phủ kín ảnh.
+
 2. **Thước đo.** Kết quả là mAP@0.5 / @0.5:0.95 theo COCO; không so trực tiếp với các chỉ số recall thô của một số báo cáo khác (khác thước đo).
 
 3. **Phóng đại (zoom) không mang lại lợi ích** với detector cố định — muốn khai thác cần đầu head thưa (sparse head), ngoài phạm vi đồ án.

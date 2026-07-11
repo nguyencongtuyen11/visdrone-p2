@@ -49,6 +49,7 @@ ap.add_argument("--show-grid", action="store_true", help="ve them luoi tho (mac 
 ap.add_argument("--rescue", action="store_true", help="CHE DO CHUNG MINH RL KHON: to VANG vat chi lat RL bat duoc (full+luoi sot)")
 ap.add_argument("--min-rescue", type=int, default=0, help="chi luu anh co >= N vat RL cuu (nhat anh dep cho slide)")
 ap.add_argument("--vs-full", action="store_true", help="rescue so voi YOLO THUAN (dramatic hon) thay vi so voi luoi")
+ap.add_argument("--all-roi", action="store_true", help="ve TAT CA ROI (mac dinh rescue chi ve ROI co cuu duoc vat)")
 ap.add_argument("--out-width", type=int, default=0, help=">0: thu nho anh ra de tiet kiem dia")
 ap.add_argument("--jpg-quality", type=int, default=90)
 ap.add_argument("--device", default="cuda")
@@ -236,15 +237,25 @@ for idx, img in enumerate(images):
         for bx in base[0]:                                 # nen: da bat boi full+luoi -> xam mong
             x0, y0, x1, y1 = [int(round(float(v))) for v in bx]
             cv2.rectangle(im, (x0, y0), (x1, y1), (150, 150, 150), max(1, W // 1100))
-        for bx in rb[resc]:                                # VANG DAM: RL cuu them
+        rbx = rb[resc]                                     # cac hop vat RL cuu
+        for bx in rbx:                                     # VANG DAM: RL cuu them
             x0, y0, x1, y1 = [int(round(float(v))) for v in bx]
             cv2.rectangle(im, (x0, y0), (x1, y1), (0, 255, 255), max(3, W // 240))
-        for r in fine:                                     # DO: vung RL cat
+        # chi ve ROI CO cuu duoc vat (tam vat vang nam trong ROI) — tru khi --all-roi
+        if args.all_roi:
+            useful = list(fine)
+        elif len(rbx):
+            cxr = (rbx[:, 0] + rbx[:, 2]) / 2; cyr = (rbx[:, 1] + rbx[:, 3]) / 2
+            useful = [r for r in fine
+                      if bool(((cxr >= r[0]) & (cxr <= r[2]) & (cyr >= r[1]) & (cyr <= r[3])).any())]
+        else:
+            useful = []
+        for r in useful:                                   # DO: vung RL cat CO ich
             x0, y0, x1, y1 = [int(round(float(v))) for v in r]
             cv2.rectangle(im, (x0, y0), (x1, y1), (0, 0, 255), max(2, W // 320))
         legend_rescue(im)
         _vs = "YOLO thuan" if args.vs_full else "full+luoi"
-        banner(im, f"RL cat dung cho -> CUU {n_resc} vat THAT ma {_vs} deu sot | {len(fine)} vung RL")
+        banner(im, f"RL cat dung cho -> CUU {n_resc} vat THAT ma {_vs} deu sot | {len(useful)}/{len(fine)} vung RL trung")
     else:
         if args.method == "full":
             b, s, c = fb, fs, fc

@@ -45,6 +45,7 @@ ap.add_argument("--base", type=int, default=640)
 ap.add_argument("--slice", type=int, default=640)
 ap.add_argument("--max-fine", type=int, default=8)
 ap.add_argument("--max-attempts", type=int, default=14)
+ap.add_argument("--roi-dedup-iou", type=float, default=0.5, help="Fix1: bo ROI RL bi 1 ROI da-giu trum >= ti le nay dien tich (0=tat)")
 ap.add_argument("--k", type=int, default=8)
 ap.add_argument("--chunk", type=int, default=16)
 ap.add_argument("--max-det", type=int, default=300, help="ultralytics val mac dinh 300")
@@ -112,6 +113,20 @@ def select_rois_moving(det):
         if rejected:
             if _attempt_overlap(roi, att[:-1]) >= 0.95: break
             continue
+        kept.append(roi)
+    return kept
+
+def dedup_rois(rois, thresh):
+    """Fix1 — LOC ROI TRUNG: giu theo thu tu agent chon (dau = gia tri cao nhat),
+    bo bat ky ROI nao co >= `thresh` dien tich cua no DA BI MOT ROI da-giu trum
+    (dung _attempt_overlap: max ti le dien tich bi 1 ROI truoc phu). Bo ROI thua ->
+    it lat hon ma khong mat vung moi. thresh<=0 hoac <=1 ROI: giu nguyen."""
+    if thresh <= 0 or len(rois) <= 1:
+        return list(rois)
+    kept = []
+    for roi in rois:
+        if kept and _attempt_overlap(roi, kept) >= thresh:
+            continue  # phan lon dien tich da duoc 1 ROI khac phu -> thua -> bo
         kept.append(roi)
     return kept
 
@@ -206,7 +221,8 @@ print(f"[coco] {len(images)} anh, split={args.split}, map-conf={MC}, max_det={ar
 print(f"[coco] RL di chuyen: {'CO' if policy_mv else 'THIEU'} | one-shot: {'CO' if policy_os else 'THIEU'}")
 
 gts = {}
-P = {"full": {}, "sahi": {}, "coarse": {}, "rl_move": {}, "oneshot": {}}
+P = {"full": {}, "sahi": {}, "coarse": {}, "rl_move": {}, "rl_dedup": {}, "oneshot": {}}
+n_slices = {"rl_move": [], "rl_dedup": []}  # Fix1: dem so lat fine/anh de so hieu qua
 t0 = time.perf_counter()
 for idx, img in enumerate(images):
     if idx % 50 == 0 and idx:
@@ -235,9 +251,17 @@ for idx, img in enumerate(images):
     P["coarse"][iid] = merge_full(shape, full, coarse_parts)
     # RL di chuyen (fine RL + luoi tho 0.6, dung lai coarse_parts)
     if policy_mv is not None:
-        fp = crop_parts(img, select_rois_moving(det))
+        rl_rois = select_rois_moving(det)
+        n_slices["rl_move"].append(len(rl_rois))
+        fp = crop_parts(img, rl_rois)
         P["rl_move"][iid] = _merge_predictions(shape, 0.5,
             [fb, *fp[0], *coarse_parts[0]], [fs, *fp[1], *coarse_parts[1]], [fc, *fp[2], *coarse_parts[2]])
+        # Fix1: RL voi ROI DA LOC TRUNG — cung luoi tho, chi khac tap ROI fine (it lat hon)
+        rl_rois_dd = dedup_rois(rl_rois, args.roi_dedup_iou)
+        n_slices["rl_dedup"].append(len(rl_rois_dd))
+        fpd = crop_parts(img, rl_rois_dd)
+        P["rl_dedup"][iid] = _merge_predictions(shape, 0.5,
+            [fb, *fpd[0], *coarse_parts[0]], [fs, *fpd[1], *coarse_parts[1]], [fc, *fpd[2], *coarse_parts[2]])
     # one-shot
     if policy_os is not None:
         grid = objectness_grid(det); regions = propose_regions(det, k=args.k)
@@ -257,7 +281,7 @@ small_thr = float(np.percentile(np.concatenate(all_gt_areas), args.small_pct)) i
 print(f"\n===== COCO mAP (split={args.split}, {len(images)} anh, conf={MC}) =====")
 print(f"  {'method':20s}{'mAP50':>9s}{'mAP50-95':>10s}{'s_recall@'+format(args.op_conf,'.2f'):>14s}")
 order = [("full", "YOLO full@640"), ("sahi", "SAHI"), ("coarse", "luoi 0.6 (khong RL)"),
-         ("rl_move", "RL di chuyen"), ("oneshot", "one-shot")]
+         ("rl_move", "RL di chuyen"), ("rl_dedup", "RL + loc ROI trung"), ("oneshot", "one-shot")]
 map50_full = None
 for key, name in order:
     if not P[key]: continue
@@ -271,3 +295,10 @@ print("  Neu khop -> thuoc do dung -> so SAHI/RL o tren la COCO mAP that, so voi
 print("\n  full@640 per-class mAP50:")
 for ci, nm in enumerate(CLASS_NAMES):
     print(f"    {nm:18s}{per_full[ci]:.4f}")
+
+if n_slices["rl_move"]:
+    print(f"\n  [Fix1] So lat RL fine trung binh/anh (CHUA tinh luoi tho 0.6) — dedup-iou={args.roi_dedup_iou}:")
+    for key, nm in (("rl_move", "RL di chuyen"), ("rl_dedup", "RL + loc ROI trung")):
+        if n_slices[key]:
+            print(f"    {nm:22s}{np.mean(n_slices[key]):6.2f} lat/anh")
+    print("  => Muon 'tot hon': rl_dedup GIU recall/mAP nhung SO LAT GIAM => bo ROI thua khong mat gi.")

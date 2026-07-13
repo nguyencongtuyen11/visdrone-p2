@@ -1,0 +1,25 @@
+# ============================================================
+# FT_CROP_CLOUD — ban cloud, detector = YOLO fine-tune TREN CROP (ft_crop).
+# Giong ft_cloud.yaml nhung weights tro sang detector crop + cache RIENG (cache_crop)
+# de KHONG dung cache best_visdrone cu. Dung de train RL KHOP CAP voi detector crop.
+# ============================================================
+includes:
+  - default.yaml
+
+paths:
+  weights: runs/detect/ft_crop/weights/best.pt   # <-- detector CROP (khac best_visdrone)
+  cache_root: data/cache_crop                     # <-- cache MOI, tach khoi data/cache_ft
+
+classes:
+  model_to_label: {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9}
+  label_to_eval:  {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9}
+
+detect:
+  conf: 0.01
+
+hard_region:
+  target_classes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+infer:
+  output_conf: 0.10
+  target_classes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

@@ -47,6 +47,8 @@ ap.add_argument("--max-fine", type=int, default=8)
 ap.add_argument("--max-attempts", type=int, default=14)
 ap.add_argument("--roi-dedup-iou", type=float, default=0.5, help="Fix1: bo ROI RL bi 1 ROI da-giu trum >= ti le nay dien tich (0=tat)")
 ap.add_argument("--kmeans-n", type=int, default=8, help="Baseline AD-Det TINH: gom tam box thanh N cum ROI (khong RL). So sanh 'RL co dang khong'")
+ap.add_argument("--topk-cand", type=int, default=12, help="V1 'it ROI ma chat': so cum K-means ung vien de xep hang")
+ap.add_argument("--topk-keep", type=int, default=5, help="V1: giu top-K cum (theo so vat nho) -> it ROI hon ma dang hon")
 ap.add_argument("--k", type=int, default=8)
 ap.add_argument("--chunk", type=int, default=16)
 ap.add_argument("--max-det", type=int, default=300, help="ultralytics val mac dinh 300")
@@ -172,6 +174,36 @@ def kmeans_rois(det, shape, n_clusters, expand=0.12):
             rois.append(roi)
     return rois
 
+def kmeans_topk_rois(det, shape, n_candidates, k_keep, expand=0.12):
+    """V1 'IT ROI MA CHAT LUONG': K-means n_candidates cum -> XEP HANG moi cum theo SO VAT NHO
+    trong no (density vat nho = cum dang zoom nhat, kieu ClusDet/AdaZoom) -> GIU top-k_keep cum
+    -> ROI = TLBR om khit (snap) + dilate lay context. SELECT cum gia tri thay vi cat het cum
+    => it ROI hon 'K-means tinh' ma moi ROI dang gia hon."""
+    b = np.asarray(det.boxes, np.float32).reshape(-1, 4)
+    s = np.asarray(det.scores, np.float32).reshape(-1)
+    if len(b) == 0:
+        return []
+    ctr = np.stack([(b[:, 0] + b[:, 2]) / 2, (b[:, 1] + b[:, 3]) / 2], 1)
+    m = min(n_candidates, len(b))
+    _, lab = _kmeans_np(ctr, m)
+    H, W = int(shape[0]), int(shape[1])
+    small_px = 0.0015 * H * W                       # nguong vat nho tuong doi (~0.15% dien tich anh)
+    is_small = (area(b) <= small_px) & (s >= 0.03)  # vat nho + it nhat detector thay mo mo
+    clusters = []
+    for c in range(m):
+        sel = lab == c
+        mb = b[sel]
+        if not len(mb):
+            continue
+        gain = float(is_small[sel].sum())           # accuracy-gain proxy = so vat nho trong cum
+        x0, y0, x1, y1 = mb[:, 0].min(), mb[:, 1].min(), mb[:, 2].max(), mb[:, 3].max()
+        ew, eh = (x1 - x0) * expand, (y1 - y0) * expand
+        roi = np.array([max(x0 - ew, 0), max(y0 - eh, 0), min(x1 + ew, W), min(y1 + eh, H)], np.float32)
+        if roi[2] > roi[0] and roi[3] > roi[1]:
+            clusters.append((gain, roi))
+    clusters.sort(key=lambda t: -t[0])              # cum nhieu vat nho nhat len dau
+    return [roi for _, roi in clusters[:k_keep]]
+
 # ---------------- COCO mAP (101-point, IoU 0.5:0.95), tu chua, khong phu thuoc ultralytics ----------------
 _TRAPZ = getattr(np, "trapezoid", None) or np.trapz  # numpy 2.x doi ten trapz -> trapezoid
 
@@ -263,8 +295,8 @@ print(f"[coco] {len(images)} anh, split={args.split}, map-conf={MC}, max_det={ar
 print(f"[coco] RL di chuyen: {'CO' if policy_mv else 'THIEU'} | one-shot: {'CO' if policy_os else 'THIEU'}")
 
 gts = {}
-P = {"full": {}, "sahi": {}, "coarse": {}, "rl_move": {}, "rl_dedup": {}, "kmeans": {}, "oneshot": {}}
-n_slices = {"rl_move": [], "rl_dedup": [], "kmeans": []}  # dem so lat fine/anh de so hieu qua
+P = {"full": {}, "sahi": {}, "coarse": {}, "rl_move": {}, "rl_dedup": {}, "kmeans": {}, "gaintop": {}, "oneshot": {}}
+n_slices = {"rl_move": [], "rl_dedup": [], "kmeans": [], "gaintop": []}  # dem so lat fine/anh de so hieu qua
 t0 = time.perf_counter()
 for idx, img in enumerate(images):
     if idx % 50 == 0 and idx:
@@ -310,6 +342,12 @@ for idx, img in enumerate(images):
     kp = crop_parts(img, km_rois)
     P["kmeans"][iid] = _merge_predictions(shape, 0.5,
         [fb, *kp[0], *coarse_parts[0]], [fs, *kp[1], *coarse_parts[1]], [fc, *kp[2], *coarse_parts[2]])
+    # V1 'it ROI ma chat luong': K-means topk_cand cum -> giu top-K theo density vat nho + snap-dilate
+    tk_rois = kmeans_topk_rois(det, shape, args.topk_cand, args.topk_keep)
+    n_slices["gaintop"].append(len(tk_rois))
+    tp = crop_parts(img, tk_rois)
+    P["gaintop"][iid] = _merge_predictions(shape, 0.5,
+        [fb, *tp[0], *coarse_parts[0]], [fs, *tp[1], *coarse_parts[1]], [fc, *tp[2], *coarse_parts[2]])
     # one-shot
     if policy_os is not None:
         grid = objectness_grid(det); regions = propose_regions(det, k=args.k)
@@ -330,7 +368,7 @@ print(f"\n===== COCO mAP (split={args.split}, {len(images)} anh, conf={MC}) ====
 print(f"  {'method':20s}{'mAP50':>9s}{'mAP50-95':>10s}{'s_recall@'+format(args.op_conf,'.2f'):>14s}")
 order = [("full", "YOLO full@640"), ("sahi", "SAHI"), ("coarse", "luoi 0.6 (khong RL)"),
          ("rl_move", "RL di chuyen"), ("rl_dedup", "RL + loc ROI trung"),
-         ("kmeans", "K-means tinh (AD-Det)"), ("oneshot", "one-shot")]
+         ("kmeans", "K-means tinh (AD-Det)"), ("gaintop", "K-means top-K (it ROI)"), ("oneshot", "one-shot")]
 map50_full = None
 for key, name in order:
     if not P[key]: continue
@@ -347,7 +385,8 @@ for ci, nm in enumerate(CLASS_NAMES):
 
 if n_slices["rl_move"]:
     print(f"\n  [Fix1] So lat RL fine trung binh/anh (CHUA tinh luoi tho 0.6) — dedup-iou={args.roi_dedup_iou}:")
-    for key, nm in (("rl_move", "RL di chuyen"), ("rl_dedup", "RL + loc ROI trung"), ("kmeans", "K-means tinh")):
+    for key, nm in (("rl_move", "RL di chuyen"), ("rl_dedup", "RL + loc ROI trung"),
+                    ("kmeans", "K-means tinh"), ("gaintop", "K-means top-K (it ROI)")):
         if n_slices[key]:
-            print(f"    {nm:22s}{np.mean(n_slices[key]):6.2f} lat/anh")
-    print("  => CAU HOI CHOT: RL (rl_move/rl_dedup) co THANG K-means tinh khong? Neu ngang/thua => RL chua dang.")
+            print(f"    {nm:24s}{np.mean(n_slices[key]):6.2f} lat/anh")
+    print("  => V1 THANG neu 'K-means top-K' GIU recall ~ 'K-means tinh' nhung SO LAT giam ro.")

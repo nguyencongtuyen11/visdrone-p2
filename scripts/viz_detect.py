@@ -42,6 +42,7 @@ ap.add_argument("--base", type=int, default=640)
 ap.add_argument("--slice", type=int, default=640)
 ap.add_argument("--max-fine", type=int, default=8)
 ap.add_argument("--max-attempts", type=int, default=14)
+ap.add_argument("--roi-dedup-iou", type=float, default=0.0, help="Fix1: bo ROI RL bi 1 ROI khac trum >= ti le nay (0.3 khuyen; 0=tat)")
 ap.add_argument("--chunk", type=int, default=16)
 ap.add_argument("--labels", action="store_true", help="ghi ten lop + conf tren moi box (dong dac thi roi)")
 ap.add_argument("--no-roi", action="store_true", help="an ROI do (chi ve detection)")
@@ -114,6 +115,17 @@ def select_rois_moving(det):
                         info.get("stop_due_to_max_steps") or info.get("stop_due_to_stalled_roi"))
         if rejected:
             if _attempt_overlap(roi, att[:-1]) >= 0.95: break
+            continue
+        kept.append(roi)
+    return kept
+
+def dedup_rois(rois, thresh):
+    """Fix1 — bo ROI thua: giu theo thu tu, bo ROI nao >= thresh dien tich da bi 1 ROI da-giu trum."""
+    if thresh <= 0 or len(rois) <= 1:
+        return list(rois)
+    kept = []
+    for roi in rois:
+        if kept and _attempt_overlap(roi, kept) >= thresh:
             continue
         kept.append(roi)
     return kept
@@ -214,7 +226,7 @@ for idx, img in enumerate(images):
     if args.rescue:
         # === CHE DO CHUNG MINH: vat CHI lat RL bat duoc (full + luoi deu sot) ===
         coarse = _fixed_grid_rois(det.image_shape, 0.6, 0.15)
-        fine = select_rois_moving(det)
+        fine = dedup_rois(select_rois_moving(det), args.roi_dedup_iou)
         cp = crop_parts(img, coarse); fp = crop_parts(img, fine)
         if args.vs_full:
             base = (fb, fs, fc)                                                                          # YOLO THUAN
@@ -261,7 +273,7 @@ for idx, img in enumerate(images):
             b, s, c = fb, fs, fc
         else:
             coarse = _fixed_grid_rois(det.image_shape, 0.6, 0.15)
-            fine = select_rois_moving(det) if args.method == "rl" else []
+            fine = dedup_rois(select_rois_moving(det), args.roi_dedup_iou) if args.method == "rl" else []
             pb, ps, pc = crop_parts(img, fine + coarse)
             b, s, c = _merge_predictions(det.image_shape, 0.5, [fb, *pb], [fs, *ps], [fc, *pc])
         draw(im, b, s, c, th)
